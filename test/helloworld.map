@@ -1,0 +1,15 @@
+Symbol: ACIA_CFG (helloworld.s19) = 0095
+Symbol: ACIA_CFG_REG (helloworld.s19) = C000
+Symbol: ACIA_DATA_REG (helloworld.s19) = C001
+Symbol: acia_putc (helloworld.s19) = FF20
+Symbol: ACIA_RDRF_MASK (helloworld.s19) = 0001
+Symbol: ACIA_RESET (helloworld.s19) = 0003
+Symbol: ACIA_STATUS_REG (helloworld.s19) = C000
+Symbol: ACIA_TDRE_MASK (helloworld.s19) = 0002
+Symbol: helloworld (helloworld.s19) = FF2F
+Symbol: main (helloworld.s19) = FF00
+Symbol: putsagain (helloworld.s19) = FF16
+Symbol: putsend (helloworld.s19) = FF1E
+Symbol: RAMSTART (helloworld.s19) = 1000
+Symbol: reset (helloworld.s19) = FFFE
+Symbol: tdr_full (helloworld.s19) = FF22

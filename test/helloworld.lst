@@ -1,0 +1,67 @@
+     C000             (     helloworld.s):00001         ACIA_CFG_REG    equ $C000
+     C000             (     helloworld.s):00002         ACIA_STATUS_REG equ $C000
+     C001             (     helloworld.s):00003         ACIA_DATA_REG   equ $C001
+                      (     helloworld.s):00004         
+     0003             (     helloworld.s):00005         ACIA_RESET      equ %00000011   ; CR0 = 1 and CR1 = 1
+     0095             (     helloworld.s):00006         ACIA_CFG        equ %10010101   ; Receive Int enable, Transmit Int disable, 8bits + 1 stop, clock/4/16=115200
+     0002             (     helloworld.s):00007         ACIA_TDRE_MASK  equ %00000010   ; Mask to test Transmit Data Register Full
+     0001             (     helloworld.s):00008         ACIA_RDRF_MASK  equ %00000001   ; Mask to test Receive Data Register Full
+                      (     helloworld.s):00009         
+     1000             (     helloworld.s):00010         RAMSTART        equ $1000       
+                      (     helloworld.s):00011                         org 0xFF00
+                      (     helloworld.s):00012                         
+FF00                  (     helloworld.s):00013         main:
+FF00 1AFF             (     helloworld.s):00014                         orcc #$FF       ; Disable interrupts.
+FF02 4F               (     helloworld.s):00015                         clra            
+FF03 1F8B             (     helloworld.s):00016                         tfr a,dp        ; Set direct page register to 0.
+FF05 10CE1000         (     helloworld.s):00017                 lds #RAMSTART   ; Initialize HwStack
+FF09 C603             (     helloworld.s):00018                 ldb #ACIA_RESET
+FF0B F7C000           (     helloworld.s):00019                         stb ACIA_CFG_REG        ;Master reset
+FF0E C695             (     helloworld.s):00020                         ldb #ACIA_CFG
+FF10 F7C000           (     helloworld.s):00021                         stb ACIA_CFG_REG        ;ACIA config via control register       
+FF13 8EFF2F           (     helloworld.s):00022                         ldx #helloworld
+FF16                  (     helloworld.s):00023         putsagain:
+FF16 E680             (     helloworld.s):00024                         ldb ,x+
+FF18 2704             (     helloworld.s):00025                         beq putsend
+FF1A 8D04             (     helloworld.s):00026                         bsr acia_putc
+FF1C 20F8             (     helloworld.s):00027                         bra putsagain
+FF1E                  (     helloworld.s):00028         putsend:
+FF1E 20FE             (     helloworld.s):00029                         bra .
+                      (     helloworld.s):00030         
+                      (     helloworld.s):00031                         
+                      (     helloworld.s):00032         ;Write a caracter to ACIA
+                      (     helloworld.s):00033         ;Caracter to be written is in B
+FF20                  (     helloworld.s):00034         acia_putc:  
+FF20 3402             (     helloworld.s):00035                         pshs a
+FF22                  (     helloworld.s):00036         tdr_full:
+FF22 B6C000           (     helloworld.s):00037                         lda ACIA_STATUS_REG
+FF25 8402             (     helloworld.s):00038                         anda #ACIA_TDRE_MASK
+FF27 27F9             (     helloworld.s):00039                         beq     tdr_full
+FF29 F7C001           (     helloworld.s):00040                         stb ACIA_DATA_REG
+FF2C 3502             (     helloworld.s):00041                         puls a
+FF2E 39               (     helloworld.s):00042                         rts     
+                      (     helloworld.s):00043                         
+FF2F                  (     helloworld.s):00044         helloworld:        
+FF2F 48656C6C6F20576F (     helloworld.s):00045                 fcc 'Hello World !'
+     726C642021
+FF3C 0D0A00           (     helloworld.s):00046                         fcb $0D,$0A,$00
+                      (     helloworld.s):00047                         
+                      (     helloworld.s):00048                 org 0xFFFE    
+FFFE FF00             (     helloworld.s):00049         reset:  fdb main        ;RESET
+
+Symbol Table:
+[ G] ACIA_CFG                         0095
+[ G] ACIA_CFG_REG                     C000
+[ G] ACIA_DATA_REG                    C001
+[ G] acia_putc                        FF20
+[ G] ACIA_RDRF_MASK                   0001
+[ G] ACIA_RESET                       0003
+[ G] ACIA_STATUS_REG                  C000
+[ G] ACIA_TDRE_MASK                   0002
+[ G] helloworld                       FF2F
+[ G] main                             FF00
+[ G] putsagain                        FF16
+[ G] putsend                          FF1E
+[ G] RAMSTART                         1000
+[ G] reset                            FFFE
+[ G] tdr_full                         FF22
