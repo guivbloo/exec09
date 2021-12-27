@@ -1,9 +1,9 @@
 SRCS=6809.c\
 	device_rom.c device_ram.c\
 	device_mc6850.c \
-	monitor.c  symtab.c  command.c main.c\
+	monitor.c  symtab.c  command.c simulator.c main.c\
 	machine.c machine_bloo.c \
-	io_com_udp.c io_file.c
+	io_com_udp.c io_file.c utils_time.c
 
 #CFLAGS=-DHAVE_READLINE -DHAVE_TERMIOS
 LDFLAGS=

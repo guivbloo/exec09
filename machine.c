@@ -4,15 +4,11 @@
 #include <stdint.h>
 #include "machine.h"
 #include "command.h"
-//#include "monitor.h"
 #include "device.h"
-//#include "device_null.h"
-//#include "machine_eon.h"
 
 #define CONFIG_LEGACY
 #define mmu_device (device_table[0])
 
-extern FILE *log_file;
 struct machine *machine;
 
 unsigned int device_count = 0;
@@ -396,7 +392,9 @@ void fault (unsigned int addr, unsigned char type)
 {
 	if (cpu_running)
 	{
-		sim_error (">>> Page fault: addr=%04X type=%02X PC=%04X\n", addr, type, get_pc ());
+		//sim_error (">>> Page fault: addr=%04X type=%02X PC=%04X\n", addr, type, get_pc ());
+		//error
+		printf("error");
 #if 0
 		fault_addr = addr;
 		fault_type = type;

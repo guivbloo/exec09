@@ -1,9 +1,37 @@
 Main
 	simulator
-	
-	utils_time
-	utils_file
-	utils_udp_com
+		Machine
+		{
+		machine_init
+		machine_update
+		machine_match
+		machine_fault
+		machine_describe
+		machine_dump
+		machine_write8
+		machine_read8
+		machine_read16
+		machine_abs_read8
+		machine_abs_write8
+		
+		absolute_from_reladdr
+		print_device_name
+
+
+
+			Machine_x
+				Device
+					Device_x
+				6809
+
+monitor
+command
+symtab
+
+utils_types
+utils_time
+utils_file
+utils_udp_com
 
 
 

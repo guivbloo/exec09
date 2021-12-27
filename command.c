@@ -1,5 +1,3 @@
-/* -*- c-file-style: "ellemtel"  -*- */
-
 #include "6809.h"
 #include "monitor.h"
 #include "machine.h"
@@ -12,7 +10,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <termios.h>
-# include <stdio.h>
+#include <stdio.h>
+#include <stdlib.h>
 #ifdef HAVE_READLINE
 # include <stdio.h>
 # include <readline/readline.h>

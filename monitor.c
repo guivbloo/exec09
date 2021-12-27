@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "types.h"
+#include "simulator.h"
 #include "io_com_udp.h"
 #include "io_file.h"
 #include "symtab.h"
@@ -944,8 +945,6 @@ int dasm (char *buf, absolute_address_t opc)
   int fetch1;			/* the first (MSB) fetched byte, used in macro RDWORD */
   absolute_address_t tmp;
 
-  extern int os9call;
-
   op = fetch8();
 
   if (op == 0x10) /* prefix for PAGE2 opcodes */
@@ -967,7 +966,7 @@ int dasm (char *buf, absolute_address_t opc)
     }
 
   op_str = mne[op];
-  if ((!strcmp("SWI2", op_str)) && os9call)
+  if ((!strcmp("SWI2", op_str)) && sim_get_os9call())
     {
       op = fetch8();
       if(op < 0x91)

@@ -23,9 +23,14 @@
 #include <stdlib.h>
  
 #include "types.h"
+#include "utils_time.h"
 #include "6809.h"
 #include "monitor.h"
 #include "command.h"
+
+/* The total number of cycles that have been executed */
+unsigned long total_nb_cycles_exec = 0;
+
 
 unsigned X, Y, S, U, PC;
 unsigned A, B, DP;
@@ -112,60 +117,14 @@ static inline void check_stack (void)
 	/* TODO */
 }
 
-void sim_error (const char *format, ...)
-{
-	va_list ap;
 
-	va_start (ap, format);
-	fprintf (stderr, "m6809-run: (at PC=%04X) ", iPC);
-	vfprintf (stderr, format, ap);
-	va_end (ap);
-
-	if (debug_enabled)
-		monitor_activate();
-	else {
-		keybuffering (1);
-		exit (2);
-        }
-}
 
 unsigned long get_cycles (void)
 {
-	return total + cpu_period - cpu_clk;
+	return total_nb_cycles_exec + cpu_period - cpu_clk;
 }
 
-void sim_exit (uint8_t exit_code)
-{
-	char *s;
 
-	/* On a nonzero exit, always print an error message. */
-	if (exit_code != 0)
-	{
-		printf ("m6809-run: program exited with %d\n", exit_code);
-		if (exit_code)
-			monitor_backtrace ();
-	}
-
-	/* If a cycle count should be printed, do that last. */
-	if (dump_cycles_on_success)
-	{
-		printf ("%s : %ld cycles, %ld ms\n", prog_name, get_cycles (),
-			get_elapsed_realtime ());
-	}
-
-	if ((s = getenv ("LOG6809")) != NULL)
-	{
-		FILE *fp = fopen (s, "a");
-		if (fp)
-		{
-			fprintf (fp, "%s : %ld cycles, %ld ms\n", prog_name, get_cycles (),
-				get_elapsed_realtime ());
-			fclose (fp);
-		}
-	}
-	keybuffering (1);
-	exit (exit_code);
-}
 
 static inline void change_pc (unsigned newPC)
 {
@@ -381,7 +340,7 @@ static void indexed (void)			/* note take 1 extra cycle */
 	  break;
 	default:
 	  ea = 0;
-	  sim_error ("invalid index post $%02X\n", post);
+	  //sim_error ("invalid index post $%02X\n", post);
 	  break;
 	}
     }
@@ -1538,7 +1497,7 @@ void cwai (void)
       change_pc (PC - 1); /* instruction -- did not fetch immediate */
       break;
   default:
-      sim_error ("invalid value of cwai_state %02X\n", cwai_state);
+      //sim_error ("invalid value of cwai_state %02X\n", cwai_state);
       break;
   }
 }
@@ -1546,7 +1505,7 @@ void cwai (void)
 void sync (void)
 {
   cpu_clk -= 4;
-  sim_error ("SYNC - not supported yet!");
+  //sim_error ("SYNC - not supported yet!");
 }
 
 static void orcc (void)
@@ -2002,7 +1961,7 @@ int cpu_execute (int cycles)
 		st16 (S);
 		break;
 	      default:
-	        sim_error ("invalid opcode (1) at %s\n", monitor_addr_name (iPC));
+	        //sim_error ("invalid opcode (1) at %s\n", monitor_addr_name (iPC));
 		break;
 	      }
 	  }
@@ -2077,7 +2036,7 @@ int cpu_execute (int cycles)
 		cpu_clk--;
 		break;
 	      default:
-	        sim_error ("invalid opcode (2) at %s\n", monitor_addr_name (iPC));
+	        //sim_error ("invalid opcode (2) at %s\n", monitor_addr_name (iPC));
 		break;
 	      }
 	  }
@@ -3004,7 +2963,7 @@ int cpu_execute (int cycles)
 
 	default:
 	  cpu_clk -= 2;
-	  sim_error ("invalid opcode '%02X'\n", opcode);
+	  //sim_error ("invalid opcode '%02X'\n", opcode);
 	  PC = iPC;
 	  break;
 	}
@@ -3017,6 +2976,7 @@ int cpu_execute (int cycles)
 cpu_exit:
    cpu_period -= cpu_clk;
    cpu_clk = cpu_period;
+   total_nb_cycles_exec += cpu_period;
    return cpu_period;
 }
 

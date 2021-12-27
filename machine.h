@@ -79,6 +79,7 @@ struct machine
 	unsigned long cycles_per_sec;
 };
 
+void machine_init (const char *machine_name, const char *boot_rom_file);
 
 void fault (unsigned int addr, unsigned char type);
 uint8_t cpu_read8 (unsigned int addr);
@@ -87,7 +88,7 @@ void cpu_write8 (unsigned int addr, uint8_t val);
 uint8_t abs_read8 (absolute_address_t addr);
 void abs_write8 (absolute_address_t addr, uint8_t val);
 void cpu_is_running (void);
-void machine_init (const char *machine_name, const char *boot_rom_file);
+
 absolute_address_t to_absolute (unsigned long cpuaddr);
 void dump_machine(void);
 void describe_machine (void);
