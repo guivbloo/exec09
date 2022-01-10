@@ -83,9 +83,12 @@ void monitor_return (void);
 void monitor_activate (void);
 void monitor_deactivate (void);
 BOOLEAN monitor_status (void);
+void monitor_init (void); 
+int check_break (void);
+int monitor6809 (void);
+int dasm (char *, absolute_address_t);
 /* --- Functions for debug manipulation --- */
-void debug_activate (void);
-void debug_deactivate (void);
+void monitor_set_debug(BOOLEAN status);
 BOOLEAN debug_status (void);
 
 const char * monitor_addr_name (target_addr_t addr);
@@ -94,8 +97,8 @@ void monitor_backtrace (void);
 const char* monitor_addr_name (target_addr_t target_addr);
 //int load_s19(FILE *fp);
 //int load_hex (FILE *fp);
-int load_map_file (const char *name);
-int load_image (const char *);
+int monitor_load_map_file (const char *name);
+int monitor_load_image (const char *name);
 
 
 #endif

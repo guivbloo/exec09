@@ -31,6 +31,11 @@
 /* The total number of cycles that have been executed */
 unsigned long total_nb_cycles_exec = 0;
 
+/* set after CPU reset and never cleared; shows that
+   system initialisation has completed */
+int cpu_running = 0;
+
+
 
 unsigned X, Y, S, U, PC;
 unsigned A, B, DP;
@@ -105,6 +110,17 @@ void request_firq (unsigned int source)
 void release_firq (unsigned int source)
 {
 	firqs_pending &= ~(1 << source);
+}
+
+
+void set_cpu_is_running (void)
+{
+	cpu_running = 1;
+}
+
+int get_cpu_is_running (void)
+{
+	return(cpu_running);
 }
 
 static inline void check_pc (void)
@@ -2991,7 +3007,7 @@ void cpu_reset (void)
 #endif
 
    change_pc (read16 (0xfffe));
-   cpu_is_running ();
+   set_cpu_is_running ();
 }
 
 void print_regs (void)

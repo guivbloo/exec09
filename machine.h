@@ -1,11 +1,10 @@
-#ifndef M6809_MACHINE_H
-#define M6809_MACHINE_H
+#ifndef MACHINE_H
+#define MACHINE_H
 
 
 #include "device.h"
 
 /* This file defines structures used to build generic machines on a 6809. */
-
 
 
 typedef unsigned long absolute_address_t;
@@ -51,23 +50,9 @@ be configured by the MMU.  It allows for more granularity and is
 needed in some *hardcoded* mapping cases. */
 
 #define BUS_MAP_SIZE 128
-
-struct bus_map
-{
-	unsigned int devid; /* The devid mapped here */
-	unsigned long offset; /* The offset within the device */
-	unsigned char flags;
-};
-
 #define NUM_BUS_MAPS (MAX_CPU_ADDR / BUS_MAP_SIZE)
 
-
-/* The machine structure collects everything about the abstract machine.
-The pointer 'machine' points to the machine that is being run. */
-
-extern struct machine *machine;
-
-struct machine
+typedef struct 
 {
 	const char *name;
 	void (*init) (const char *boot_rom_file);
@@ -76,35 +61,37 @@ struct machine
 	void (*periodic) (void);
 	void (*dump) (void);
 	void (*tick) (void);
+	void (*update) (void);
 	unsigned long cycles_per_sec;
-};
+} machine_t;
 
 void machine_init (const char *machine_name, const char *boot_rom_file);
+void machine_fault (unsigned int addr, unsigned char type);
+void machine_dump(void);
+int machine_dump_thread(void);
+void machine_describe (void);
+void machine_update (void);
+void machine_periodic (void);
+void machine_tick (void);
+int machine_run (int cycles);
+void machine_reset (void);
 
-void fault (unsigned int addr, unsigned char type);
 uint8_t cpu_read8 (unsigned int addr);
 uint16_t cpu_read16 (unsigned int addr);
 void cpu_write8 (unsigned int addr, uint8_t val);
 uint8_t abs_read8 (absolute_address_t addr);
 void abs_write8 (absolute_address_t addr, uint8_t val);
-void cpu_is_running (void);
 
 absolute_address_t to_absolute (unsigned long cpuaddr);
-void dump_machine(void);
-void describe_machine (void);
-void machine_update (void);
-void print_device_name (unsigned int devno);
-void device_define (struct hw_device *dev,
+
+
+
+/* Functions used by a machine to attach and map devices in the addressable space */
+void machine_map_device (struct hw_device *dev,
         unsigned long offset,
         unsigned int addr,
         unsigned int len,
         unsigned int flags);
-void bus_map (unsigned int addr,
-        unsigned int devid,
-        unsigned long offset,
-        unsigned int len,
-        unsigned int flags);
-void bus_unmap (unsigned int addr, unsigned int len);
-struct hw_device *device_attach (struct hw_class *class_ptr, unsigned int size, void *priv);
+void machine_attach_device (struct hw_device *dev);
 
-#endif /* _M6809_MACHINE_H */
+#endif /* MACHINE_H */

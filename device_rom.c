@@ -51,7 +51,7 @@ struct hw_device *rom_create (const char *filename, unsigned int maxsize)
 	}
 
 	buf = malloc (maxsize);
-	dev = device_attach (&rom_class, maxsize, buf);
+	dev = device_create (&rom_class, maxsize, buf);
 	if (filename)
 	{
 		fread (buf, image_size, 1, fp);

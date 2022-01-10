@@ -118,5 +118,5 @@ struct hw_device* mc6850_create (void)
   uart_client = udp_com_socket_create (UART_SRC_CLIENT_PORT);
   port->fin = uart_server;
   port->fout = uart_client;
-  return device_attach (&mc6850_class, BUS_MAP_SIZE, port);
+  return device_create (&mc6850_class, BUS_MAP_SIZE, port);
 }

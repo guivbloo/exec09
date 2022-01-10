@@ -62,4 +62,6 @@ struct hw_device
 	void *priv;
 };
 
+struct hw_device *device_create (struct hw_class *class_ptr, unsigned int size, void *priv);
+
 #endif /* _M6809_DEVICE_H */

@@ -6,9 +6,7 @@
 #include "types.h"
 #include "simulator.h"
 #include "utils_time.h"
-#include "symtab.h"
 #include "command.h"
-#include "6809.h"
 #include "monitor.h"
 #include "machine.h"
 
@@ -129,7 +127,7 @@ void idle_loop (void)
 	if (total_ms_elapsed > 100)
 	{
 		total_ms_elapsed -= 100;
-		if (machine->periodic) machine->periodic ();
+		machine_periodic ();
 		command_periodic ();
 	}
 
@@ -146,9 +144,8 @@ void idle_loop (void)
 
 int sim_init()
 {
+	int rc;
     init_time();
-    /* Init symbol table */
-    sym_init();
     if (binary)
 	{
 		/* Binary option: Load directly the .bin during machine_init*/
@@ -159,24 +156,27 @@ int sim_init()
 		/* The machine loader cannot deal with image files, so initialize the machine first, passing it a NULL
 		filename, then load the image file in S19 or hex format afterwards. */
 		machine_init (machine_name, NULL);
-		if (prog_name && load_image (prog_name))
-            printf("error");
+		if (prog_name)
+		{
+			rc = monitor_load_image (prog_name);
+			if (rc != 0)
+			{
+				/* Error to be maanged */
+            	printf("error");
+			}
+			/* Try to load a map file */
+			monitor_load_map_file (prog_name);
+		}
 	}
-    /* Try to load a map file */
-	if (prog_name)
-		load_map_file (prog_name);
-
 	/* Enable debugging if no executable given yet or debug_enabled option is activated */
 	if (!prog_name || debug_enabled == 1)
-		debug_activate();
-	
-	/* OK, ready to run.  Reset the CPU first. */
+		monitor_set_debug(ACTIVATED);
+
+	/* OK, ready to run.  Reset the machine first. */
 	if (prog_name)
-		cpu_reset ();
+		machine_reset ();
 
 	monitor_init ();
-	keybuffering_defaults();
-	keybuffering(0);
 }
 
 int sim_run()
@@ -196,12 +196,12 @@ int sim_run()
 		{
 			/* Simulate some CPU time, either 1ms worth or up to the
 			next possible tick */
-			cpu_execute (sim_freq * 1000);
+			machine_run (sim_freq * 1000);
 		}
 		else
 		{
-			cpu_execute (cycles_per_tick);
-			if (machine->tick) machine->tick ();
+			machine_run (cycles_per_tick);
+			machine_tick ();
 		}
 
 		/* Align with real time*/

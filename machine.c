@@ -5,11 +5,17 @@
 #include "machine.h"
 #include "command.h"
 #include "device.h"
+#include "6809.h"
 
-#define CONFIG_LEGACY
-#define mmu_device (device_table[0])
+struct bus_map
+{
+	unsigned int devid; /* The devid mapped here */
+	unsigned long offset; /* The offset within the device */
+	unsigned char flags;
+};
 
-struct machine *machine;
+/* The pointer 'machine' points to the machine that is being run. */
+machine_t *machine;
 
 unsigned int device_count = 0;
 struct hw_device *device_table[MAX_BUS_DEVICES];
@@ -20,48 +26,24 @@ struct bus_map busmaps[NUM_BUS_MAPS];
 
 struct bus_map default_busmaps[NUM_BUS_MAPS];
 
-uint16_t fault_addr;
 
-uint8_t fault_type;
-
-/* set after CPU reset and never cleared; shows that
-   system initialisation has completed */
-int cpu_running = 0;
-
-void cpu_is_running (void)
-{
-	cpu_running = 1;
-}
 
 void do_fault (unsigned int addr, unsigned int type)
 {
-	if (cpu_running)
+	if (get_cpu_is_running())
 		machine->fault (addr, type);
 }
-
-// nac never used.
-//void exit_fault (unsigned int addr, unsigned int type)
-//{
-//	monitor_on = debug_enabled;
-//	sim_error ("Fault: addr=%04X type=%02X\n", addr, type);
-//	exit (1);
-//}
 
 /**
  * Attach a new device to the bus.  Only called during init.
  */
-struct hw_device *device_attach (struct hw_class *class_ptr, unsigned int size, void *priv)
+void machine_attach_device (struct hw_device *dev)
 {
-	struct hw_device *dev = malloc (sizeof (struct hw_device));
-	dev->class_ptr = class_ptr;
 	dev->devid = device_count;
-	dev->size = size;
-	dev->priv = priv;
 	device_table[device_count++] = dev;
 
 	/* Attach implies reset */
-	class_ptr->reset (dev);
-	return dev;
+	dev->class_ptr->reset (dev);
 }
 
 /**
@@ -108,7 +90,7 @@ void bus_map (unsigned int addr,
 	}
 }
 
-void device_define (struct hw_device *dev,
+void machine_map_device (struct hw_device *dev,
 	unsigned long offset,
 	unsigned int addr,
 	unsigned int len,
@@ -154,11 +136,6 @@ static struct hw_device *find_device (unsigned int addr, unsigned char id)
 		return null_device;
 	}
 	return device_table[id];
-}
-
-void print_device_name (unsigned int devno)
-{
-   printf ("%02X", devno);
 }
 
 absolute_address_t absolute_from_reladdr (unsigned int device, unsigned long reladdr)
@@ -234,7 +211,7 @@ uint8_t cpu_read8 (unsigned int addr)
 	struct hw_class *class_ptr = dev->class_ptr;
 	unsigned long phy_addr = map->offset + addr % BUS_MAP_SIZE;
 
-	if (cpu_running && !(map->flags & MAP_READABLE))
+	if (get_cpu_is_running() && !(map->flags & MAP_READABLE))
 	{
 		machine->fault (addr, FAULT_NOT_READABLE);
 		}
@@ -249,7 +226,7 @@ uint16_t cpu_read16 (unsigned int addr)
 	struct hw_class *class_ptr = dev->class_ptr;
 	unsigned long phy_addr = map->offset + addr % BUS_MAP_SIZE;
 
-	if (cpu_running && !(map->flags & MAP_READABLE))
+	if (get_cpu_is_running() && !(map->flags & MAP_READABLE))
 		do_fault (addr, FAULT_NOT_READABLE);
 	command_read_hook (absolute_from_reladdr (map->devid, phy_addr));
 	return ((*class_ptr->read) (dev, phy_addr) << 8)
@@ -274,7 +251,7 @@ void cpu_write8 (unsigned int addr, uint8_t val)
            startup (but maybe it would be better if ROM load
            used absolute access so that this routine was not
            used at all for that purpose) */
-	if (!cpu_running || (map->flags & MAP_WRITABLE))
+	if (!get_cpu_is_running() || (map->flags & MAP_WRITABLE))
             {
                 (*class_ptr->write) (dev, phy_addr, val);
             }
@@ -282,7 +259,7 @@ void cpu_write8 (unsigned int addr, uint8_t val)
             {
                 /* silently ignore the write */
             }
-        else if (cpu_running)
+        else if (get_cpu_is_running())
             {
 		do_fault (addr, FAULT_NOT_WRITABLE);
             }
@@ -315,7 +292,7 @@ absolute_address_t to_absolute (unsigned long cpuaddr)
 
 
 // Dump machine (if supported)
-void dump_machine(void)
+void machine_dump(void)
 {
 	/*
     if (machine->dump) {
@@ -334,8 +311,21 @@ void dump_machine(void)
 	}
 }
 
+void machine_reset (void)
+{
+	int i;
+	cpu_reset();
+	for (i=0; i < device_count; i++)
+	{
+		struct hw_device *dev = device_table[i];
+		if (dev->class_ptr->reset)
+			dev->class_ptr->reset (dev);
+	}
+}
+
+
 // Describe machine, devices and mapping.
-void describe_machine (void)
+void machine_describe (void)
 {
 	unsigned int devno;
 	unsigned int mapno;
@@ -388,21 +378,20 @@ void describe_machine (void)
  * Simple fault handler
  **********************************************************/
 
-void fault (unsigned int addr, unsigned char type)
+void machine_fault (unsigned int addr, unsigned char type)
 {
-	if (cpu_running)
+	if (get_cpu_is_running())
 	{
 		//sim_error (">>> Page fault: addr=%04X type=%02X PC=%04X\n", addr, type, get_pc ());
 		//error
 		printf("error");
-#if 0
-		fault_addr = addr;
-		fault_type = type;
-		irq ();
-#endif
 	}
 }
 
+int machine_run (int cycles)
+{
+	return cpu_execute(cycles);
+}
 
 
 /**********************************************************/
@@ -418,12 +407,25 @@ void machine_update (void)
 	}
 }
 
-int machine_match (const char *machine_name, const char *boot_rom_file, struct machine *m)
+int machine_dump_thread(void)
+{
+	return(0);
+}
+
+void machine_periodic (void)
+{
+	return;
+}
+
+void machine_tick (void)
+{
+	return;
+}
+
+int machine_match (const char *machine_name, machine_t *m)
 {
 	if (!strcmp (m->name, machine_name))
 	{
-		machine = m;
-		m->init (boot_rom_file);
 		return 1;
 	}
 	return 0;
@@ -432,7 +434,7 @@ int machine_match (const char *machine_name, const char *boot_rom_file, struct m
 void machine_init (const char *machine_name, const char *boot_rom_file)
 {
 	//extern struct machine simple_machine;
-	extern struct machine bloo_machine;
+	extern machine_t bloo_machine;
 	//extern struct machine eon_machine;
 	//extern struct machine eon2_machine;
 	//extern struct machine smii_machine;
@@ -446,7 +448,11 @@ void machine_init (const char *machine_name, const char *boot_rom_file)
 	for (i = 0; i < NUM_BUS_MAPS; i++)
 		busmaps[i].devid = INVALID_DEVID;
 
-	if (machine_match (machine_name, boot_rom_file, &bloo_machine));
+	if (machine_match (machine_name, &bloo_machine))
+	{
+		machine = &bloo_machine;
+		machine->init (boot_rom_file);
+	}	
 	//else if machine_match (machine_name, boot_rom_file, &simple_machine));
 	//else if (machine_match (machine_name, boot_rom_file, &eon2_machine));
 	//else if (machine_match (machine_name, boot_rom_file, &smii_machine));

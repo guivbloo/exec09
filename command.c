@@ -1,6 +1,7 @@
-#include "6809.h"
+
 #include "monitor.h"
 #include "machine.h"
+#include "6809.h"
 #include "symtab.h"
 #include "io_file.h"
 #include <sys/errno.h>
@@ -101,6 +102,11 @@ FILE *command_input;
 /**********************************************************/
 /******************** 6809 Functions **********************/
 /**********************************************************/
+
+void print_device_name (unsigned int devno)
+{
+   printf ("%02X", devno);
+}
 
 void print_addr (absolute_address_t addr)
 {
@@ -737,13 +743,13 @@ void command_change_thread (void)
    /* TODO thread_debug does not exist by default
       so this will return an error.. which we'll ignore.
    */
-   if (machine->dump_thread && eval ("$thread_debug", &eflag))
+   if (machine_dump_thread() && eval ("$thread_debug", &eflag))
    {
       if (addr)
       {
          printf ("[Current thread = ");
          print_addr (thread_id);
-         machine->dump_thread (thread_id);
+         machine_dump_thread ();
          print_thread_data (thread_id);
          printf ("]\n");
       }
@@ -1040,7 +1046,7 @@ void cmd_symbol_file (void)
 {
    char *arg = getarg ();
    if (arg)
-      load_map_file (arg);
+      monitor_load_map_file (arg);
 }
 
 void cmd_display (void)
@@ -1234,7 +1240,7 @@ void cmd_trace_dump (void)
 
 void cmd_dump (void)
 {
-   dump_machine();
+   machine_dump();
 }
 
 void cmd_restore (void)
@@ -1244,7 +1250,7 @@ void cmd_restore (void)
 
 void cmd_info (void)
 {
-   describe_machine();
+   machine_describe();
 }
 
 /****************** Parser ************************/

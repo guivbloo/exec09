@@ -918,14 +918,9 @@ BOOLEAN monitor_status (void)
 	return monitor_st;
 }
 
-void debug_activate (void)
+void monitor_set_debug(BOOLEAN status)
 {
-	debug_st = ACTIVATED;
-}
-
-void debug_deactivate (void)
-{
-	debug_st = DEACTIVATED;
+	debug_st = status;
 }
 
 BOOLEAN debug_status (void)
@@ -1138,7 +1133,7 @@ int dasm (char *buf, absolute_address_t opc)
 }
 
 // nac it would be nice to have an intelligent map file reader..
-int load_map_file (const char *name)
+int monitor_load_map_file (const char *name)
 {
 	FILE *fp;
 	char map_filename[256];
@@ -1168,6 +1163,7 @@ int load_map_file (const char *name)
 	}
 
 	printf ("Reading symbols from '%s'...\n", map_filename);
+  sym_init();
 	for (;;)
 	{
 		fgets (buf, sizeof(buf)-1, fp);
@@ -1327,7 +1323,7 @@ int load_s19(FILE *fp)
 /* Auto-detect image file type and load it. For this to work,
    the machine must already be initialized.
 */
-int load_image (const char *name)
+int monitor_load_image (const char *name)
 {
   unsigned int count, addr, type;
   FILE *fp;
@@ -1452,6 +1448,8 @@ void monitor_init (void)
 	command_server = udp_com_socket_create (COMMAND_SRC_SERVER_PORT);
 	command_client = udp_com_socket_create (COMMAND_SRC_CLIENT_PORT);
 	command_init();
+  keybuffering_defaults();
+	keybuffering(0);
 }
 
 int check_break (void)

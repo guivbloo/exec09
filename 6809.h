@@ -1,25 +1,3 @@
-/*
- * Copyright 2001 by Arto Salmi and Joze Fabcic
- * Copyright 2006 by Brian Dominy <brian@oddchange.com>
- *
- * This file is part of GCC6809.
- *
- * GCC6809 is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- * 
- * GCC6809 is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with GCC6809; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- */
-
-
 #ifndef M6809_H
 #define M6809_H
 
@@ -69,7 +47,7 @@ extern const char *prog_name;
 /* 6809.c */
 extern int cpu_quit;
 extern int cpu_execute (int);
-extern void cpu_reset (void);
+void cpu_reset (void);
 
 extern unsigned get_a  (void);
 extern unsigned get_b  (void);
@@ -92,14 +70,6 @@ extern void set_s  (unsigned);
 extern void set_u  (unsigned);
 extern void set_pc (unsigned);
 extern void set_d  (unsigned);
-
-
-/* monitor.c */
-extern int monitor_on;
-extern int check_break (void);
-extern void monitor_init (void); 
-extern int monitor6809 (void);
-extern int dasm (char *, absolute_address_t);
 
 
 
@@ -162,7 +132,7 @@ typedef struct
 
 void command_irq_hook (unsigned long cycles);
 unsigned long get_cycles (void);
-
+int get_cpu_is_running (void);
 void request_irq (unsigned int source);
 void release_irq (unsigned int source);
 void request_firq (unsigned int source);

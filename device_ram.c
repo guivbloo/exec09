@@ -38,5 +38,5 @@ struct hw_class ram_class =
 struct hw_device *ram_create (unsigned long size)
 {
 	void *buf = malloc (size);
-	return device_attach (&ram_class, size, buf);
+	return device_create (&ram_class, size, buf);
 }
