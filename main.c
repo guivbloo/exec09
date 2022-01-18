@@ -7,6 +7,8 @@
 #include "utils_time.h"
 #include "types.h"
 #include "simulator.h"
+#include "logging.h"
+
 
 int do_help (const char *arg __attribute__((unused)));
 
@@ -20,8 +22,8 @@ struct option
 	unsigned int takes_arg : TRUE;
 	unsigned int is_int: TRUE;
 	int (*handler) (const char *arg);
-	void (*setter_d) (const int arg);
-	void (*setter_s) (const char *arg);
+	void (*setter_d) (BOOLEAN arg);
+	void (*setter_s) (char *arg);
 } 
 
 option_table[] = {
@@ -32,8 +34,6 @@ option_table[] = {
 	{ 'b', "binary", "Program is in .bin format",
 		FALSE, FALSE, TRUE, NULL, sim_set_binary, NULL},
 	{ 't', "loadmap", "" },
-	{ 'T', "trace", "",
-		FALSE, FALSE, TRUE, NULL, sim_set_trace, NULL},
 	{ 's', "machine", "Specify the machine (exact hardware) to emulate",
 		FALSE, TRUE, FALSE, NULL, NULL, sim_set_machine_name},
 	{ '\0', NULL },
@@ -44,7 +44,7 @@ int do_help (const char *arg __attribute__((unused)))
 {
 	struct option *opt = option_table;
 
-	printf ("Motorola 6809 Simulator     Version 1\n");
+	printf ("EXEC09: Motorola 6809 Simulator\n");
 	printf ("m6809-run [options] [program]\n\n");
 	printf ("Options:\n");
 	while (opt->o_long != NULL)
@@ -66,7 +66,7 @@ int do_help (const char *arg __attribute__((unused)))
  * Returns zero if no argument was taken.
  * Returns negative on error.
  */
-int process_option (struct option *opt, const char *arg)
+int process_option (struct option *opt, char *arg)
 {
 	int rc;
 	int var;
@@ -95,14 +95,9 @@ int process_option (struct option *opt, const char *arg)
 	}
 	else
 	{
-		if (arg)
-		{
-			printf ("  Takes no argument but one given, ignored.\n");
-		}
-
 		if (opt->is_int)
 		{
-			opt->setter_d(1);
+			opt->setter_d(TRUE);
 		}
 		rc = 0;
 	}
@@ -119,7 +114,7 @@ int process_option (struct option *opt, const char *arg)
 }
 
 /* Set program name to execute */
-void process_plain_argument (const char *arg)
+void process_plain_argument (char *arg)
 {
 	//printf ("plain argument '%s'\n", arg);
 	sim_set_prog_name(arg);
@@ -185,7 +180,10 @@ next_arg:
 
 int main (int argc, char *argv[])
 {
+	
 	parse_args (argc, argv);
+	log_init(STDOUT, NULL);
+	log_message(DEBUG, "EXEC09 simulator starting");
 	sim_init();
 	sim_run();
 	return (0);

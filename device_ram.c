@@ -3,7 +3,6 @@
  
  
 #include "types.h"
-#include "machine.h"
 #include "device.h"
 #include "device_ram.h"
 

@@ -1,9 +1,7 @@
  #include <stdlib.h>
  #include <stdio.h>
  #include <string.h>
- 
  #include "types.h"
- #include "machine.h"
  #include "device.h"
  #include "device_rom.h"
  #include "io_file.h"

@@ -34,7 +34,7 @@
 	machine_map_device (ram , 0, BLOO_RAM_BASE, BLOO_RAM_SIZE, MAP_READWRITE );
 
 	/* $C000 and $C001 for 6850 */
-	uart = mc6850_create();
+	uart = mc6850_create(BLOO_UART_SIZE);
 	machine_attach_device(uart);
     machine_map_device (uart, 0, BLOO_UART_BASE, BLOO_UART_SIZE, MAP_READWRITE);
 	

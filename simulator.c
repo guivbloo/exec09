@@ -6,9 +6,10 @@
 #include "types.h"
 #include "simulator.h"
 #include "utils_time.h"
-#include "command.h"
-#include "monitor.h"
 #include "machine.h"
+#include "debugger.h"
+#include "logging.h"
+#include "symtab.h"
 
 #define INT_MAX 0
 
@@ -25,10 +26,7 @@ unsigned int sim_freq = 1;
 unsigned int cycles_per_tick = 0;
 
 /* Nonzero if debugging support is turned on */
-int debug_enabled = 1;
-
-/* Nonzero if tracing is enabled */
-int trace_enabled = 0;
+BOOLEAN debug_enabled = FALSE;
 
 /* When nonzero, causes the program to print the total number of cycles
 on a successful exit. */
@@ -43,43 +41,34 @@ across runs of the simulator. */
 int machine_persistent = 0;
 
 /* The file to be loaded is a .bin file */
-static int binary = 0;
+BOOLEAN binary = FALSE;
 
-const char *machine_name = "bloo";
+char *machine_name = "bloo";
 
-const char *prog_name = NULL;
+char *prog_name = NULL;
 
-void sim_set_debug(int bool)
+void sim_set_debug(BOOLEAN bool)
 {
-    if(bool == 0)
-        debug_enabled = 0;
-    else
-        debug_enabled = 1;
+	debug_enabled = bool;
 } 
 
-
-void sim_set_binary(int bool)
+BOOLEAN sim_get_debug_status()
 {
-    if(bool == 0)
-        binary = 0;
-    else
-        binary = 1;
+	return (debug_enabled);
+}
+
+
+void sim_set_binary(BOOLEAN bool)
+{
+        binary = bool;
 } 
 
-void sim_set_trace(int bool)
-{
-    if(bool == 0)
-        trace_enabled = 0;
-    else
-        trace_enabled = 1;
-} 
-
-void sim_set_machine_name(const char *name)
+void sim_set_machine_name(char *name)
 {
     machine_name = name;
 } 
 
-void sim_set_prog_name(const char *name)
+void sim_set_prog_name(char *name)
 {
     prog_name = name;
 }   
@@ -117,7 +106,7 @@ void idle_loop (void)
 	real_ms = time_diff (&last, &now);
 	last = now;
 
-	cycles = get_cycles ();
+	cycles = machine_get_cycles ();
 	sim_ms = (cycles - last_cycles) / cycles_per_ms;
 	if (sim_ms < 0)
 		sim_ms += cycles_per_ms;
@@ -128,7 +117,7 @@ void idle_loop (void)
 	{
 		total_ms_elapsed -= 100;
 		machine_periodic ();
-		command_periodic ();
+		debugger_periodic();
 	}
 
 	delay = sim_ms - real_ms;
@@ -146,6 +135,7 @@ int sim_init()
 {
 	int rc;
     init_time();
+	sym_init();
     if (binary)
 	{
 		/* Binary option: Load directly the .bin during machine_init*/
@@ -154,29 +144,17 @@ int sim_init()
 	else
 	{
 		/* The machine loader cannot deal with image files, so initialize the machine first, passing it a NULL
-		filename, then load the image file in S19 or hex format afterwards. */
+		filename, then load the image file in S19 or hex format through the debugger afterwards. */
 		machine_init (machine_name, NULL);
-		if (prog_name)
-		{
-			rc = monitor_load_image (prog_name);
-			if (rc != 0)
-			{
-				/* Error to be maanged */
-            	printf("error");
-			}
-			/* Try to load a map file */
-			monitor_load_map_file (prog_name);
-		}
+		debugger_load_image(prog_name);
 	}
-	/* Enable debugging if no executable given yet or debug_enabled option is activated */
-	if (!prog_name || debug_enabled == 1)
-		monitor_set_debug(ACTIVATED);
-
 	/* OK, ready to run.  Reset the machine first. */
 	if (prog_name)
 		machine_reset ();
-
-	monitor_init ();
+	else
+		sim_set_debug(TRUE);
+		
+	debugger_init ();
 }
 
 int sim_run()
@@ -187,11 +165,11 @@ int sim_run()
            periodically and call the machine's ->tick() routine */
         //[NAC HACK 2017Mar30] need to schedule this properly instead of this one-or-the-other approach
         //.. need to track the rate of each and work out who's next.
-	for (cpu_quit = 1; cpu_quit != 0;)
+	do
 	{
 		/* Call each device that needs periodic processing. */
 		machine_update ();
-
+		log_message(DEBUG, "Run");
 		if (cycles_per_tick == 0)
 		{
 			/* Simulate some CPU time, either 1ms worth or up to the
@@ -208,18 +186,21 @@ int sim_run()
 		idle_loop ();
 
 		/* Check for a rogue program that won't end */
+		/*
 		if ((max_cycles > 0) && (get_cycles() > max_cycles))
 		{
 			sim_error ("maximum cycle count exceeded at %s\n",
 				monitor_addr_name (get_pc ()));
 		}
-	}
-
+		*/
+	} while(debugger_get_exitcmd() != TRUE);
+	log_message(DEBUG, "Exiting");
 	sim_exit (0);
-	keybuffering (1);
 	return 0;
 }
 
+
+/*
 void sim_error (const char *format, ...)
 {
 	va_list ap;
@@ -230,32 +211,38 @@ void sim_error (const char *format, ...)
 	va_end (ap);
 
 	if (debug_enabled)
-		monitor_activate();
+		debugger_set_status(ACTIVATED);
 	else {
-		keybuffering (1);
+		debugger_exit();
 		exit (2);
         }
 }
+*/
 
 void sim_exit (uint8_t exit_code)
 {
 	char *s;
 
 	/* On a nonzero exit, always print an error message. */
+	/*
 	if (exit_code != 0)
 	{
 		printf ("m6809-run: program exited with %d\n", exit_code);
 		if (exit_code)
 			monitor_backtrace ();
 	}
+	*/
 
 	/* If a cycle count should be printed, do that last. */
+	/*
 	if (dump_cycles_on_success)
 	{
 		printf ("%s : %ld cycles, %ld ms\n", prog_name, get_cycles (),
 			get_elapsed_realtime ());
 	}
+	*/
 
+	/*
 	if ((s = getenv ("LOG6809")) != NULL)
 	{
 		FILE *fp = fopen (s, "a");
@@ -266,6 +253,7 @@ void sim_exit (uint8_t exit_code)
 			fclose (fp);
 		}
 	}
-	keybuffering (1);
+	*/
+	debugger_exit();
 	exit (exit_code);
 }

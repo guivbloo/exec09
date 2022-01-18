@@ -10,7 +10,6 @@
 #include "types.h"
 #include "device.h"
 #include "device_mc6850.h"
-#include "machine.h"
 #include "io_com_udp.h"
 
 #define UART_SRC_CLIENT_PORT 8000
@@ -111,12 +110,12 @@ struct hw_class mc6850_class =
   };
 
 
-struct hw_device* mc6850_create (void)
+struct hw_device* mc6850_create (unsigned long size)
 {
   struct mc6850_port *port = malloc (sizeof (struct mc6850_port));
   uart_server = udp_com_socket_create (UART_SRC_SERVER_PORT);
   uart_client = udp_com_socket_create (UART_SRC_CLIENT_PORT);
   port->fin = uart_server;
   port->fout = uart_client;
-  return device_create (&mc6850_class, BUS_MAP_SIZE, port);
+  return device_create (&mc6850_class, size, port);
 }

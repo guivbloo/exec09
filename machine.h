@@ -4,10 +4,15 @@
 
 #include "device.h"
 
-/* This file defines structures used to build generic machines on a 6809. */
+
+struct bus_map
+{
+	unsigned int devid; /* The devid mapped here */
+	unsigned long offset; /* The offset within the device */
+	unsigned char flags;
+};
 
 
-typedef unsigned long absolute_address_t;
 
 #define MAX_CPU_ADDR 65536
 
@@ -75,14 +80,11 @@ void machine_periodic (void);
 void machine_tick (void);
 int machine_run (int cycles);
 void machine_reset (void);
+unsigned long machine_get_cycles (void);
+struct bus_map *machine_find_map (unsigned int addr);
+struct hw_device *machine_find_device (unsigned int addr, unsigned char id);
 
-uint8_t cpu_read8 (unsigned int addr);
-uint16_t cpu_read16 (unsigned int addr);
-void cpu_write8 (unsigned int addr, uint8_t val);
-uint8_t abs_read8 (absolute_address_t addr);
-void abs_write8 (absolute_address_t addr, uint8_t val);
 
-absolute_address_t to_absolute (unsigned long cpuaddr);
 
 
 

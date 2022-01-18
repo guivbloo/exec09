@@ -1,23 +1,3 @@
-/*
- * Copyright 2001 by Arto Salmi and Joze Fabcic
- * Copyright 2006, 2007 by Brian Dominy <brian@oddchange.com>
- *
- * This file is part of GCC6809.
- *
- * GCC6809 is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GCC6809 is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GCC6809; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,8 +5,24 @@
 #include "types.h"
 #include "utils_time.h"
 #include "6809.h"
+#include "bus_access.h"
 #include "monitor.h"
 #include "command.h"
+#include "logging.h"
+
+
+#define E_FLAG 0x80
+#define F_FLAG 0x40
+#define H_FLAG 0x20
+#define I_FLAG 0x10
+#define N_FLAG 0x08
+#define Z_FLAG 0x04
+#define V_FLAG 0x02
+#define C_FLAG 0x01
+
+/* For cwai state machine */
+#define CWAI_STATE_IDLE     0
+#define CWAI_STATE_WAIT     1
 
 /* The total number of cycles that have been executed */
 unsigned long total_nb_cycles_exec = 0;
@@ -48,7 +44,6 @@ unsigned long irq_start_time;
 unsigned ea = 0;
 long cpu_clk = 0;
 long cpu_period = 0;
-int cpu_quit = 1;
 unsigned int irqs_pending = 0;
 unsigned int firqs_pending = 0;
 unsigned int cc_changed = 0;
@@ -61,6 +56,7 @@ extern int dump_cycles_on_success;
 extern int trace_enabled;
 
 void irq (void);
+
 void firq (void);
 
 /* Values of 'source' are arbitrary and can be assigned
@@ -168,19 +164,19 @@ static inline void change_pc (unsigned newPC)
 
 static inline unsigned imm_byte (void)
 {
-  unsigned val = read8 (PC);
+  unsigned val = bus_read8 (PC);
   PC++;
   return val;
 }
 
 static inline unsigned imm_word (void)
 {
-  unsigned val = read16 (PC);
+  unsigned val = bus_read16 (PC);
   PC += 2;
   return val;
 }
 
-#define WRMEM(addr, data) write8 (addr, data)
+#define WRMEM(addr, data) bus_write8 (addr, data)
 
 static void WRMEM16 (unsigned addr, unsigned data)
 {
@@ -189,7 +185,7 @@ static void WRMEM16 (unsigned addr, unsigned data)
   WRMEM ((addr + 1) & 0xffff, data & 0xff);
 }
 
-#define RDMEM(addr) read8 (addr)
+#define RDMEM(addr) bus_read8 (addr)
 
 static unsigned RDMEM16 (unsigned addr)
 {
@@ -215,7 +211,7 @@ static unsigned read_stack16 (unsigned addr)
 
 static void direct (void)
 {
-  unsigned val = read8 (PC) | DP;
+  unsigned val = bus_read8 (PC) | DP;
   PC++;
   ea = val;
 }
@@ -373,7 +369,7 @@ static void indexed (void)			/* note take 1 extra cycle */
 
 static void extended (void)
 {
-  unsigned val = read16 (PC);
+  unsigned val = bus_read16 (PC);
   PC += 2;
   ea = val;
 }
@@ -1420,7 +1416,7 @@ void irq (void)
   EFI |= I_FLAG;
 
   irq_start_time = get_cycles();
-  change_pc(read16(0xfff8));
+  change_pc(bus_read16(0xfff8));
 }
 
 void firq (void)
@@ -1434,7 +1430,7 @@ void firq (void)
   }
   EFI |= (I_FLAG | F_FLAG);
 
-  change_pc(read16(0xfff6));
+  change_pc(bus_read16(0xfff6));
 }
 
 void swi (void)
@@ -1442,7 +1438,7 @@ void swi (void)
   stack_machine_state(1);
   EFI |= (I_FLAG | F_FLAG);
 
-  change_pc (read16 (0xfffa));
+  change_pc (bus_read16 (0xfffa));
 }
 
 void swi2 (void)
@@ -1450,7 +1446,7 @@ void swi2 (void)
   cpu_clk -= 1;
   stack_machine_state(1);
 
-  change_pc (read16 (0xfff4));
+  change_pc (bus_read16 (0xfff4));
 }
 
 void swi3 (void)
@@ -1458,7 +1454,7 @@ void swi3 (void)
   cpu_clk -= 1;
   stack_machine_state(1);
 
-  change_pc (read16 (0xfff2));
+  change_pc (bus_read16 (0xfff2));
 }
 
 #ifdef H6309
@@ -1618,21 +1614,18 @@ static void bsr (void)
 /* Execute 6809 code for a certain number of cycles. */
 int cpu_execute (int cycles)
 {
-  unsigned opcode;
-
-  cpu_period = cpu_clk = cycles;
-
-  do
-    {
+	unsigned opcode;
+	cpu_period = cpu_clk = cycles;
+	do
+	{
 	 	command_insn_hook ();
 		if (check_break () != 0)
-			monitor_activate();
-		//printf("cpu_execute: monitor_st:%d\n", monitor_status());
-		if (monitor_status() != 0)
+			monitor_set_debug(TRUE);
+		if (monitor_get_debug_status() != FALSE)
 			if (monitor6809 () != 0)
 				goto cpu_exit;
 
-      iPC = PC;
+	  iPC = PC;
       opcode = imm_byte ();
 
       switch (opcode)
@@ -3006,7 +2999,7 @@ void cpu_reset (void)
    MD = E = F = V = 0;
 #endif
 
-   change_pc (read16 (0xfffe));
+   change_pc (bus_read16 (0xfffe));
    set_cpu_is_running ();
 }
 
@@ -3023,12 +3016,12 @@ void print_regs (void)
    if (get_cc() & E_FLAG) flags[7] = 'E';
 
    printf (" X: 0x%04X  [X]: 0x%04X    Y: 0x%04X  [Y]: 0x%04X    ",
-            get_x(), read16(get_x()), get_y(), read16(get_y()) );
+            get_x(), bus_read16(get_x()), get_y(), bus_read16(get_y()) );
    printf ("PC: 0x%04X [PC]: 0x%04X\n",
-            get_pc(), read16(get_pc()) );
+            get_pc(), bus_read16(get_pc()) );
    printf (" U: 0x%04X  [U]: 0x%04X    S: 0x%04X  [S]: 0x%04X    ",
-            get_u(), read16(get_u()), get_s(), read16(get_s()) );
+            get_u(), bus_read16(get_u()), get_s(), bus_read16(get_s()) );
    printf ("DP: 0x%02X\n", get_dp() );
    printf (" A: 0x%02X      B: 0x%02X    [D]: 0x%04X   CC: %s\n",
-            get_a(), get_b(), read16(get_d()), flags );
+            get_a(), get_b(), bus_read16(get_d()), flags );
 }

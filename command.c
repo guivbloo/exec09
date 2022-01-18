@@ -1,9 +1,12 @@
 
 #include "monitor.h"
 #include "machine.h"
-#include "6809.h"
+#include "command.h"
 #include "symtab.h"
 #include "io_file.h"
+#include "bus_access.h"
+#include "types.h"
+#include "logging.h"
 #include <sys/errno.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -21,6 +24,48 @@
 
 
 
+#define MAX_BREAKS 32
+#define MAX_DISPLAYS 32
+#define MAX_HISTORY 10
+#define MAX_THREADS 64
+
+
+#define SYM_DEFAULT 0
+#define SYM_AUTO 1
+
+typedef void (*command_handler_t) (void);
+
+typedef void (*virtual_handler_t) (unsigned long *val, int writep);
+
+typedef unsigned int thread_id_t;
+
+typedef struct
+{
+   int id : 8;
+   thread_id_t tid;
+} thread_t;
+
+typedef struct
+{
+   unsigned int id : 8;
+   unsigned int used : 1;
+   unsigned int enabled : 1;
+   unsigned int conditional : 1;
+   unsigned int threaded : 1;
+   unsigned int on_read : 1;
+   unsigned int on_write : 1;
+   unsigned int on_execute : 1;
+   unsigned int size : 4;
+   unsigned int keep_running : 1;
+	unsigned int temp : 1;
+	unsigned int last_write : 16;
+	unsigned int write_mask : 16;
+   absolute_address_t addr;
+   char condition[128];
+   thread_id_t tid;
+   unsigned int pass_count;
+   unsigned int ignore_count;
+} breakpoint_t;
 
 
 
@@ -86,6 +131,8 @@ char *command_flags;
 
 int exit_command_loop;
 
+int exit_command = 1;
+
 #define IRQ_CYCLE_COUNTS 128
 unsigned int irq_cycle_tab[IRQ_CYCLE_COUNTS] = { 0, };
 unsigned int irq_cycle_entry = 0;
@@ -116,7 +163,7 @@ void print_addr (absolute_address_t addr)
    putchar (':');
    printf ("0x%04lX", addr & 0xFFFFFF);
 
-   name = sym_lookup (&program_symtab, addr);
+   name = sym_lookup (PROGRAM_SYMTAB_T, addr);
    if (name)
       printf ("  %-18.18s", name);
    else
@@ -159,7 +206,7 @@ void assign_virtual (const char *name, unsigned long val, char *eflag)
 {
    unsigned long v_val;
 
-   if (!sym_find (&auto_symtab, name, &v_val, 0))
+   if (!sym_find (AUTO_SYMTAB_T, name, &v_val, 0))
    {
       virtual_handler_t virtual = (virtual_handler_t)v_val;
       virtual (&val, 1);
@@ -187,7 +234,7 @@ unsigned long eval_virtual (const char *name, char *eflag)
     * compute the value on-the-fly. If not found there
     * a value of 0 is returned along with an error flag.
     */
-   if (!sym_find (&auto_symtab, name, &val, 0))
+   if (!sym_find (AUTO_SYMTAB_T, name, &val, 0))
    {
       virtual_handler_t virtual = (virtual_handler_t)val;
       virtual (&val, 0);
@@ -212,16 +259,16 @@ void eval_assign (char *expr, unsigned long val, char *eflag)
       absolute_address_t dst = eval_mem(expr, LVALUE, eflag);
 
       if (!*eflag)
-         abs_write8(dst, val);
+         bus_write8_abs(dst, val);
    }
 }
 
 unsigned long target_read (absolute_address_t addr, unsigned int size)
 {
    if (size == 1)
-      return abs_read8(addr);
+      return bus_read8_abs(addr);
    else
-      return abs_read16(addr);
+      return bus_read16_abs(addr);
 }
 
 /* Extract any valid format flags - ignore anything else
@@ -338,8 +385,8 @@ unsigned long eval_mem (char *expr, eval_mode_t mode, char *eflag)
    }
    else if (isalpha (*expr) || (*expr == '_'))
    {
-      if (!sym_find (&program_symtab, expr, &val, 0));
-      else if (!sym_find (&internal_symtab, expr, &val, 0));
+      if (!sym_find (PROGRAM_SYMTAB_T, expr, &val, 0));
+      else if (!sym_find (INTERNAL_SYMTAB_T, expr, &val, 0));
       else
       {
          val = 0;
@@ -563,7 +610,7 @@ void print_value (unsigned long val, datatype_t *typep)
          char c;
 
          putchar ('"');
-         while ((c = abs_read8 (addr++)) != '\0')
+         while ((c = bus_read8_abs (addr++)) != '\0')
             putchar (c);
          putchar ('"');
          return;
@@ -720,8 +767,8 @@ void print_thread_data (absolute_address_t th)
    uint16_t w;
    absolute_address_t pc;
 
-   w = abs_read16 (th + THREAD_DATA_PC);
-   b = abs_read8 (th + THREAD_DATA_ROMBANK);
+   w = bus_read16_abs (th + THREAD_DATA_PC);
+   b = bus_read8_abs (th + THREAD_DATA_ROMBANK);
    if (w >= 0x8000)
       pc = 0xF0000 + w;
    else
@@ -815,7 +862,7 @@ void cmd_set (void)
          if (eflag)
             report_errors(eflag);
          else
-            sym_set (&internal_symtab, arg, val, 0);
+            sym_set (INTERNAL_SYMTAB_T, arg, val, 0);
       }
       else
       {
@@ -980,7 +1027,7 @@ void cmd_continue (void)
 
 void cmd_quit (void)
 {
-   cpu_quit = 0;
+   exit_command = 0;
    exit_command_loop = 1;
 }
 
@@ -1119,19 +1166,22 @@ void cmd_pc(void)
 
 void cmd_vars (void)
 {
-   struct symtab *symtab = &program_symtab; /* default */
    char* arg = getarg();
    if (arg && !strcmp(arg, "auto"))
    {
-      symtab = &auto_symtab;
       printf("Print auto\n");
+      symtab_print (AUTO_SYMTAB_T);
    }
    else if (arg && !strcmp(arg, "internal"))
    {
-      symtab = &internal_symtab;
       printf("Print internal\n");
+      symtab_print (INTERNAL_SYMTAB_T);
    }
-   symtab_print (symtab);
+   else
+   {
+      symtab_print (PROGRAM_SYMTAB_T);
+   }
+   
 }
 
 void cmd_runfor (void)
@@ -1195,7 +1245,7 @@ void cmd_measure (void)
       /* Push the current PC onto the stack for the
          duration of the measurement. */
       set_s (get_s () - 2);
-      write16 (get_s (), retaddr);
+      bus_write16 (get_s (), retaddr);
 
       /* Set a temp breakpoint at the current PC, so that
          the measurement will halt. */
@@ -1384,18 +1434,17 @@ static int print_insn_long (absolute_address_t addr)
    int size = dasm(buf, addr);
 
    const char* name;
-
    print_device_name(addr >> 28);
    putchar(':');
    printf("0x%04lX ", addr & 0xFFFFFF);
 
    for (i = 0; i < size; i++)
-      printf("%02X", abs_read8(addr + i));
+      printf("%02X", bus_read8_abs(addr + i));
 
    for (i = 0; i < 4 - size; i++)
       printf("  ");
 
-   name = sym_lookup(&program_symtab, addr);
+   name = sym_lookup(PROGRAM_SYMTAB_T, addr);
    if (name)
       printf("  %-12.12s", name);
    else
@@ -1413,6 +1462,8 @@ void print_current_insn (void)
 
 #define PROMPT "(dbg) "
 #define MAXLINE 256
+
+
 int command_exec (FILE *infile)
 {
    char buffer[MAXLINE];
@@ -1540,14 +1591,12 @@ int command_loop (void)
 
       display_print ();
       print_current_insn ();
-
    exit_command_loop = -1;
    while (exit_command_loop < 0)
    {
       if (command_exec (command_input) < 0)
          break;
    }
-
    if (exit_command_loop == 0)
       keybuffering (0);
 
@@ -1582,11 +1631,11 @@ void breakpoint_hit (breakpoint_t *br)
 
    if(br->keep_running == 0)
 	{
-		monitor_activate();
+		monitor_set_debug(ACTIVATED);
 	}
 	else
 	{
-		monitor_deactivate();	
+		monitor_set_debug(DEACTIVATED);	
 	}
 }
 
@@ -1614,7 +1663,7 @@ void command_insn_hook (void)
    if (br && br->enabled && br->on_execute)
    {
       breakpoint_hit (br);
-      if (monitor_status() == 0)
+      if (monitor_get_debug_status() == 0)
          return;
       if (br->temp)
          brkfree (br);
@@ -1681,7 +1730,7 @@ void command_periodic (void)
       stop_after_ms -= 100;
       if (stop_after_ms <= 0)
       {
-         monitor_activate();
+         monitor_set_debug(ACTIVATED);
          stop_after_ms = 0;
          printf ("Stopping after time elapsed.\n");
       }
@@ -1781,29 +1830,38 @@ void command_init (void)
     * using a dollar-sign prefix (e.g. $pc).  The value of the
     * symbol is a pointer to a function (e.g. pc_virtual) which
     * computes the value dynamically. */
-   sym_add (&auto_symtab, "pc", (unsigned long)pc_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "x", (unsigned long)x_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "y", (unsigned long)y_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "u", (unsigned long)u_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "s", (unsigned long)s_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "d", (unsigned long)d_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "a", (unsigned long)a_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "b", (unsigned long)b_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "dp", (unsigned long)dp_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "cc", (unsigned long)cc_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "cycles", (unsigned long)cycles_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "et", (unsigned long)et_virtual, SYM_AUTO);
-   sym_add (&auto_symtab, "irqload", (unsigned long)irq_load_virtual, SYM_AUTO);
-
+   log_message(DEBUG,"Entering")
+   sym_add (AUTO_SYMTAB_T, "pc", (unsigned long)pc_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "x", (unsigned long)x_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "y", (unsigned long)y_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "u", (unsigned long)u_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "s", (unsigned long)s_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "d", (unsigned long)d_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "a", (unsigned long)a_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "b", (unsigned long)b_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "dp", (unsigned long)dp_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "cc", (unsigned long)cc_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "cycles", (unsigned long)cycles_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "et", (unsigned long)et_virtual, SYM_AUTO);
+   sym_add (AUTO_SYMTAB_T, "irqload", (unsigned long)irq_load_virtual, SYM_AUTO);
+   
    examine_type.format = 'X'; /* hex with upper-case A-F */
    examine_type.size = 1;
 
    print_type.format = 'X';
    print_type.size = 1;
 	
-	printf("command_init\n");
+	
 
 
    command_input = stdin;
 	(void)command_exec_file (".dbinit");
+   keybuffering_defaults();
+	keybuffering(0);
+}
+
+BOOLEAN command_get_exitcmd(void)
+{
+   if(exit_command == 0)
+      return TRUE;
 }

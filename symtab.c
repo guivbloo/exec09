@@ -1,27 +1,15 @@
-/*
- * Copyright 2008 by Brian Dominy <brian@oddchange.com>
- *
- * This file is part of the Portable 6809 Simulator.
- *
- * The Simulator is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- * 
- * The Simulator is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this software; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- */
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "symtab.h"
+
+#define MAX_STRINGSPACE 32000
+
+struct stringspace
+{
+	char space[MAX_STRINGSPACE];
+	unsigned int used;
+};
 
 /* A pointer to the current stringspace */
 struct stringspace *current_stringspace;
@@ -60,7 +48,6 @@ char *stringspace_copy (const char *string)
 {
 	unsigned int len = strlen (string) + 1;
 	char *result;
-
 	if (current_stringspace->used + len > MAX_STRINGSPACE)
 		current_stringspace = stringspace_create ();
 
@@ -135,17 +122,46 @@ struct symbol *sym_find1 (struct symtab *symtab,
  * Returns 0 if the symbol exists (and optionally stores its value
  * in *value if not NULL), or -1 if it does not exist.
  */
-int sym_find (struct symtab *symtab,
+int sym_find (enum symtab_type symtable,
               const char *name, unsigned long *value, unsigned int type)
 {
+	struct symtab *symtab;
+	switch (symtable)
+	{
+		case PROGRAM_SYMTAB_T:
+			symtab = &program_symtab;
+			break;
+		case INTERNAL_SYMTAB_T:
+			symtab = &internal_symtab;
+			break;
+		case AUTO_SYMTAB_T:
+			symtab = &auto_symtab;
+			break;
+		default:
+			return (-1);
+	}
 	return sym_find1 (symtab, name, value, type) ? 0 : -1;
 }
 
 
-const char *sym_lookup (struct symtab *symtab, unsigned long value)
+const char *sym_lookup (enum symtab_type symtable, unsigned long value)
 {
 	unsigned int hash = sym_hash_value (value);
-
+	struct symtab *symtab;
+	switch (symtable)
+	{
+		case PROGRAM_SYMTAB_T:
+			symtab = &program_symtab;
+			break;
+		case INTERNAL_SYMTAB_T:
+			symtab = &internal_symtab;
+			break;
+		case AUTO_SYMTAB_T:
+			symtab = &auto_symtab;
+			break;
+		default:
+			return NULL;
+	}
    while (symtab != NULL)
    {
 	   struct symbol *chain = symtab->syms_by_value[hash];
@@ -161,12 +177,26 @@ const char *sym_lookup (struct symtab *symtab, unsigned long value)
 }
 
 
-struct symbol *sym_add (struct symtab *symtab,
+struct symbol *sym_add (enum symtab_type symtable,
 	const char *name, unsigned long value, unsigned int type)
 {
 	unsigned int hash;
 	struct symbol *s, *chain;
-
+	struct symtab *symtab;
+	switch (symtable)
+	{
+		case PROGRAM_SYMTAB_T:
+			symtab = &program_symtab;
+			break;
+		case INTERNAL_SYMTAB_T:
+			symtab = &internal_symtab;
+			break;
+		case AUTO_SYMTAB_T:
+			symtab = &auto_symtab;
+			break;
+		default:
+			return NULL;
+	}
 	s = malloc (sizeof (struct symbol));
 	s->name = stringspace_copy (name);
 	s->value = value;
@@ -188,20 +218,50 @@ struct symbol *sym_add (struct symtab *symtab,
 }
 
 
-void sym_set (struct symtab *symtab,
+void sym_set (enum symtab_type symtable,
               const char *name, unsigned long value, unsigned int type)
 {
+	struct symtab *symtab;
+	switch (symtable)
+	{
+		case PROGRAM_SYMTAB_T:
+			symtab = &program_symtab;
+			break;
+		case INTERNAL_SYMTAB_T:
+			symtab = &internal_symtab;
+			break;
+		case AUTO_SYMTAB_T:
+			symtab = &auto_symtab;
+			break;
+		default:
+			return;
+	}
 	struct symbol * s = sym_find1 (symtab, name, NULL, type);
 	if (s)
 		s->value = value;
 	else
-		sym_add (symtab, name, value, type);
+		sym_add (symtable, name, value, type);
 }
 
 
-void symtab_print (struct symtab *symtab)
+void symtab_print (enum symtab_type symtable)
 {
     //	struct symtab *symtab = &program_symtab;
+	struct symtab *symtab;
+	switch (symtable)
+	{
+		case PROGRAM_SYMTAB_T:
+			symtab = &program_symtab;
+			break;
+		case INTERNAL_SYMTAB_T:
+			symtab = &internal_symtab;
+			break;
+		case AUTO_SYMTAB_T:
+			symtab = &auto_symtab;
+			break;
+		default:
+			return;
+	}
 	absolute_address_t addr;
 	const char *id;
 	struct symbol *sym;
@@ -209,7 +269,7 @@ void symtab_print (struct symtab *symtab)
 
 	for (addr = devid << 28; addr < (devid << 28) + 0x2000; addr++)
 	{
-		id = sym_lookup (symtab, addr);
+		id = sym_lookup (symtable, addr);
 		if (id)
 		{
 			sym = sym_find1 (symtab, id, NULL, 0);

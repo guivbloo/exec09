@@ -19,7 +19,7 @@ struct mc6850_port
 #define SER_STAT_WRITEOK 0x2
 #define SER_STAT_TXEMPTY 0x2
 
-struct hw_device* mc6850_create (void);
+struct hw_device* mc6850_create (unsigned long size);
 
 
 

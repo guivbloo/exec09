@@ -1,24 +1,3 @@
-/*
- * Copyright 2001 by Arto Salmi and Joze Fabcic
- * Copyright 2006-2008 by Brian Dominy <brian@oddchange.com>
- *
- * This file is part of GCC6809.
- *
- * GCC6809 is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GCC6809 is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GCC6809; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- */
-
 #include <ctype.h>
 #include <signal.h>
 #include <string.h>
@@ -30,11 +9,44 @@
 #include "symtab.h"
 #include "monitor.h"
 #include "command.h"
+#include "bus_access.h"
 #include "os9syscalls.h"
+#include "machine.h"
+#include "logging.h"
+
+#define S_NAMED 0x1
+#define S_OFFSET 0x2
+#define S_LINE 0x4
+
+#define MAX_BREAKPOINTS 16
+
+#define MAX_FUNCTION_CALLS 512
+
+#define BP_FREE 0x0
+#define BP_USED 0x1
+#define BP_TEMP 0x2
+
+#define PROMPT_REGS 0x1
+#define PROMPT_CYCLES 0x2
+#define PROMPT_INSN 0x4
 
 #define COMMAND_SRC_CLIENT_PORT 9002
 #define COMMAND_DST_SERVER_PORT 7403
 #define COMMAND_SRC_SERVER_PORT 9004
+
+struct symbol_table {
+	struct symbol *addr_to_symbol[0x10000];
+	char *name_area;
+	int name_area_free;
+	char *name_area_next;
+};
+
+
+struct breakpoint {
+	target_addr_t addr;
+	int flags;
+	int count;
+};
 
 /* The function call stack */
 struct function_call fctab[MAX_FUNCTION_CALLS];
@@ -44,9 +56,6 @@ struct function_call *current_function_call;
 
 /* Automatically break after executing this many instructions */
 int auto_break_insn_count = 0;
-
-/* Monitor status */
-BOOLEAN monitor_st = DEACTIVATED;
 
 /* Debug status */
 BOOLEAN debug_st = DEACTIVATED;
@@ -903,19 +912,20 @@ char *off4[] = {
 
 int command_server, command_client;
 
-void monitor_activate (void)
+const char* absolute_addr_name (absolute_address_t addr)
 {
-	monitor_st = ACTIVATED;
-}
+   static char buf[256], *bufptr;
+   const char *name;
 
-void monitor_deactivate (void)
-{
-	monitor_st = DEACTIVATED;
-}
+   bufptr = buf;
 
-BOOLEAN monitor_status (void)
-{
-	return monitor_st;
+   bufptr += sprintf (bufptr, "%02lX:0x%04lX", addr >> 28, addr & 0xFFFFFF);
+
+   name = sym_lookup (PROGRAM_SYMTAB_T, addr);
+   if (name)
+      sprintf (bufptr, "  <%-16.16s>", name);
+
+   return buf;
 }
 
 void monitor_set_debug(BOOLEAN status)
@@ -923,7 +933,7 @@ void monitor_set_debug(BOOLEAN status)
 	debug_st = status;
 }
 
-BOOLEAN debug_status (void)
+BOOLEAN monitor_get_debug_status (void)
 {
 	return debug_st;
 }
@@ -940,8 +950,9 @@ int dasm (char *buf, absolute_address_t opc)
   int fetch1;			/* the first (MSB) fetched byte, used in macro RDWORD */
   absolute_address_t tmp;
 
-  op = fetch8();
 
+  op = fetch8();
+  
   if (op == 0x10) /* prefix for PAGE2 opcodes */
     {
       op = fetch8();
@@ -977,7 +988,6 @@ int dasm (char *buf, absolute_address_t opc)
     {
       buf += sprintf (buf, "%-6.6s", op_str);
     }
-
   switch (am)
     {
     case _illegal:
@@ -1163,7 +1173,6 @@ int monitor_load_map_file (const char *name)
 	}
 
 	printf ("Reading symbols from '%s'...\n", map_filename);
-  sym_init();
 	for (;;)
 	{
 		fgets (buf, sizeof(buf)-1, fp);
@@ -1183,7 +1192,7 @@ int monitor_load_map_file (const char *name)
                 // get value as hex string
                 value = (target_addr_t) strtoul(value_ptr, NULL, 16);
 
-		sym_add (&program_symtab, id_ptr, to_absolute (value), 0);
+		sym_add (PROGRAM_SYMTAB_T, id_ptr, to_absolute (value), 0);
 	}
 
 	fclose (fp);
@@ -1214,7 +1223,7 @@ int load_hex (FILE *fp)
 	    {
               if (fscanf(fp, "%2x", &data))
                 {
-		   write8(addr, (UINT8) data);
+		   bus_write8(addr, (UINT8) data);
                 }
               else
                 {
@@ -1282,7 +1291,7 @@ int load_s19(FILE *fp)
                if (fscanf (fp, "%2x", &data))
                   {
 							if(type == 1)
-								write8 (addr, (UINT8) data);
+								bus_write8 (addr, (UINT8) data);
                   }
                else
                   {
@@ -1392,22 +1401,6 @@ void monitor_return (void)
 #endif
 }
 
-const char* absolute_addr_name (absolute_address_t addr)
-{
-   static char buf[256], *bufptr;
-   const char *name;
-
-   bufptr = buf;
-
-   bufptr += sprintf (bufptr, "%02lX:0x%04lX", addr >> 28, addr & 0xFFFFFF);
-
-   name = sym_lookup (&program_symtab, addr);
-   if (name)
-      sprintf (bufptr, "  <%-16.16s>", name);
-
-   return buf;
-}
-
 const char* monitor_addr_name (target_addr_t target_addr)
 {
    static char buf[256], *bufptr;
@@ -1418,7 +1411,7 @@ const char* monitor_addr_name (target_addr_t target_addr)
 
    bufptr += sprintf (bufptr, "$%04X", target_addr);
 
-   name = sym_lookup (&program_symtab, addr);
+   name = sym_lookup (PROGRAM_SYMTAB_T, addr);
    if (name)
       sprintf (bufptr, "  <%s>", name);
 
@@ -1429,27 +1422,19 @@ static void monitor_signal (int sigtype)
 {
    (void) sigtype;
    putchar ('\n');
-   monitor_activate();
+   monitor_set_debug(ACTIVATED);
 }
 
 void monitor_init (void)
 {
-	printf("monitor_init\n");
-	fctab[0].entry_point = read16 (0xfffe);
+  BOOLEAN bool;
+	fctab[0].entry_point = bus_read16 (0xfffe);
 	memset (&fctab[0].entry_regs, 0, sizeof (struct cpu_regs));
 	current_function_call = &fctab[0];
-
 	auto_break_insn_count = 0;
 	signal (SIGINT, monitor_signal);
-	monitor_st = debug_st;	
-		/*
-	Network
-	*/
-	command_server = udp_com_socket_create (COMMAND_SRC_SERVER_PORT);
-	command_client = udp_com_socket_create (COMMAND_SRC_CLIENT_PORT);
-	command_init();
-  keybuffering_defaults();
-	keybuffering(0);
+	bool = sim_get_debug_status();
+	monitor_set_debug(bool);
 }
 
 int check_break (void)
@@ -1479,14 +1464,9 @@ Monitor entry point
 int monitor6809 (void)
 {
 	int rc;
-	char recvbuf[8];
-	if(udp_com_socket_receive (command_server, 0, recvbuf, sizeof (recvbuf)) > 0)
-	{
-		printf("%s\n",recvbuf);
-	}
 	rc = 0;
 	signal (SIGINT, monitor_signal);
 	rc = command_loop ();
-	monitor_deactivate();
+  monitor_set_debug(FALSE);
 	return rc;
 }
