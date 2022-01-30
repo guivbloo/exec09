@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "machine.h"
 #include "device.h"
-#include "6809.h"
+#include "m6809.h"
 
 
 
@@ -24,7 +24,7 @@ struct bus_map default_busmaps[NUM_BUS_MAPS];
 
 void do_fault (unsigned int addr, unsigned int type)
 {
-	if (get_cpu_is_running())
+	if (m6809_get_cpu_is_running())
 		machine->fault (addr, type);
 }
 
@@ -156,7 +156,7 @@ void machine_dump(void)
 void machine_reset (void)
 {
 	int i;
-	cpu_reset();
+	m6809_reset();
 	for (i=0; i < device_count; i++)
 	{
 		struct hw_device *dev = device_table[i];
@@ -222,9 +222,9 @@ void machine_describe (void)
 
 void machine_fault (unsigned int addr, unsigned char type)
 {
-	if (get_cpu_is_running())
+	if (m6809_get_cpu_is_running())
 	{
-		//sim_error (">>> Page fault: addr=%04X type=%02X PC=%04X\n", addr, type, get_pc ());
+		//sim_error (">>> Page fault: addr=%04X type=%02X PC=%04X\n", addr, type, m6809_get_pc ());
 		//error
 		printf("error");
 	}
@@ -232,7 +232,7 @@ void machine_fault (unsigned int addr, unsigned char type)
 
 int machine_run (int cycles)
 {
-	return cpu_execute(cycles);
+	return m6809_execute(cycles);
 }
 
 
@@ -261,7 +261,7 @@ void machine_periodic (void)
 
 unsigned long machine_get_cycles (void)
 {
-	return get_cycles();
+	return m6809_get_cycles();
 }
 
 void machine_tick (void)

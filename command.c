@@ -1,5 +1,6 @@
 
 #include "monitor.h"
+#include "m6809.h"
 #include "machine.h"
 #include "command.h"
 #include "symtab.h"
@@ -1006,7 +1007,7 @@ void cmd_next (void)
    char buf[128];
    breakpoint_t *br;
 
-   unsigned long addr = to_absolute (get_pc ());
+   unsigned long addr = to_absolute (m6809_get_pc ());
    addr += dasm (buf, addr);
 
    br = brkalloc ();
@@ -1069,7 +1070,7 @@ void cmd_list (void)
       addr = eval_mem (arg, LVALUE, &eflag);
    else
    {
-      addr = to_absolute (get_pc ());
+      addr = to_absolute (m6809_get_pc ());
       if (addr == lastpc)
          addr = lastaddr;
       else
@@ -1141,7 +1142,7 @@ void cmd_source (void)
 
 void cmd_regs (void)
 {
-   print_regs();
+   m6809_print_regs();
 }
 
 void cmd_pc(void)
@@ -1159,7 +1160,7 @@ void cmd_pc(void)
       report_errors(eflag);
    else
    {
-      set_pc(val);
+      m6809_set_pc(val);
       cmd_list();
    }
 }
@@ -1222,7 +1223,7 @@ void cmd_measure (void)
 {
    char eflag = 0;
    absolute_address_t addr;
-   target_addr_t retaddr = get_pc ();
+   target_addr_t retaddr = m6809_get_pc ();
    breakpoint_t *br;
 
    /* Get the address of the function to be measured. */
@@ -1244,8 +1245,8 @@ void cmd_measure (void)
 
       /* Push the current PC onto the stack for the
          duration of the measurement. */
-      set_s (get_s () - 2);
-      bus_write16 (get_s (), retaddr);
+      m6809_set_s (m6809_get_s () - 2);
+      bus_write16 (m6809_get_s (), retaddr);
 
       /* Set a temp breakpoint at the current PC, so that
          the measurement will halt. */
@@ -1255,10 +1256,10 @@ void cmd_measure (void)
       br->temp = 1;
 
       /* Interrupts must be disabled for this to work ! */
-      set_cc (get_cc () | 0x50);
+      m6809_set_cc (m6809_get_cc () | 0x50);
 
       /* Change the PC to the function-under-test. */
-      set_pc (addr);
+      m6809_set_pc (addr);
 
       /* Go! */
       exit_command_loop = 0;
@@ -1335,7 +1336,7 @@ struct command_name
    { "fg", "foreground", cmd_continue, NULL },
    { "q", "quit", cmd_quit,
      "Quit the simulator" },
-   { "re", "reset", cpu_reset,
+   { "re", "reset", m6809_reset,
      "Reset the CPU" },
    { "h", "help", cmd_help,
      "Display this help" },
@@ -1457,7 +1458,7 @@ static int print_insn_long (absolute_address_t addr)
 
 void print_current_insn (void)
 {
-   print_insn_long(to_absolute(get_pc()));
+   print_insn_long(to_absolute(m6809_get_pc()));
 }
 
 #define PROMPT "(dbg) "
@@ -1652,7 +1653,7 @@ void command_insn_hook (void)
    absolute_address_t abspc;
    breakpoint_t *br;
 
-   pc = get_pc ();
+   pc = m6809_get_pc ();
    command_trace_insn (pc);
 
    if (active_break_count == 0)
@@ -1682,7 +1683,7 @@ void command_read_hook (absolute_address_t addr)
    br = brkfind_by_addr (addr);
    if (br && br->enabled && br->on_read)
    {
-      printf ("Watchpoint %d triggered. [pc=0x%04X ", br->id, get_pc());
+      printf ("Watchpoint %d triggered. [pc=0x%04X ", br->id, m6809_get_pc());
       print_addr (addr);
       printf ("]\n");
       breakpoint_hit (br);
@@ -1709,7 +1710,7 @@ void command_write_hook (absolute_address_t addr, uint8_t val)
 
          breakpoint_hit (br);
 
-         printf ("Watchpoint %d triggered. [pc=0x%04X ", br->id, get_pc());
+         printf ("Watchpoint %d triggered. [pc=0x%04X ", br->id, m6809_get_pc());
          print_addr (addr);
          printf (" = 0x%02X]\n", val);
       }
@@ -1738,59 +1739,59 @@ void command_periodic (void)
 }
 
 void pc_virtual (unsigned long *val, int writep) {
-   if (writep) set_pc (*val);
-   else *val = get_pc ();
+   if (writep) m6809_set_pc (*val);
+   else *val = m6809_get_pc ();
 }
 void x_virtual (unsigned long *val, int writep) {
-   if (writep) set_x (*val);
-   else *val = get_x ();
+   if (writep) m6809_set_x (*val);
+   else *val = m6809_get_x ();
 }
 void y_virtual (unsigned long *val, int writep) {
    if (writep)
-      set_y (*val);
-   else *val = get_y ();
+      m6809_set_y (*val);
+   else *val = m6809_get_y ();
 }
 void u_virtual (unsigned long *val, int writep) {
    if (writep)
-      set_u (*val);
+      m6809_set_u (*val);
    else
-      *val = get_u ();
+      *val = m6809_get_u ();
 }
 void s_virtual (unsigned long *val, int writep) {
    if (writep)
-      set_s (*val);
+      m6809_set_s (*val);
    else
-      *val = get_s ();
+      *val = m6809_get_s ();
 }
 void d_virtual (unsigned long *val, int writep) {
    if (writep)
-      set_d (*val);
+      m6809_set_d (*val);
    else
-      *val = get_d ();
+      *val = m6809_get_d ();
 }
 void a_virtual (unsigned long *val, int writep) {
    if (writep)
-      set_a (*val);
+      m6809_set_a (*val);
    else
-      *val = get_a ();
+      *val = m6809_get_a ();
 }
 void b_virtual (unsigned long *val, int writep) {
    if (writep)
-      set_b (*val);
+      m6809_set_b (*val);
    else
-      *val = get_b ();
+      *val = m6809_get_b ();
 }
 void dp_virtual (unsigned long *val, int writep) {
    if (writep)
-      set_dp (*val);
+      m6809_set_dp (*val);
    else
-      *val = get_dp ();
+      *val = m6809_get_dp ();
 }
 void cc_virtual (unsigned long *val, int writep) {
    if (writep)
-      set_cc (*val);
+      m6809_set_cc (*val);
    else
-      *val = get_cc ();
+      *val = m6809_get_cc ();
 }
 void irq_load_virtual (unsigned long *val, int writep) {
    if (!writep)
@@ -1800,15 +1801,15 @@ void irq_load_virtual (unsigned long *val, int writep) {
 void cycles_virtual (unsigned long *val, int writep)
 {
    if (!writep)
-      *val = get_cycles ();
+      *val = m6809_get_cycles ();
 }
 
 void et_virtual (unsigned long *val, int writep)
 {
    static unsigned long last_cycles = 0;
    if (!writep)
-      *val = get_cycles () - last_cycles;
-   last_cycles = get_cycles ();
+      *val = m6809_get_cycles () - last_cycles;
+   last_cycles = m6809_get_cycles ();
 }
 
 /**

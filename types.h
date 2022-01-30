@@ -38,6 +38,7 @@ typedef signed int INT32;
 typedef uint8_t BOOLEAN;
 
 typedef unsigned long absolute_address_t;
+typedef uint16_t target_addr_t;
 
 #define ACTIVATED 1
 #define DEACTIVATED 0

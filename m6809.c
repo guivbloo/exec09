@@ -4,10 +4,10 @@
  
 #include "types.h"
 #include "utils_time.h"
-#include "6809.h"
+#include "m6809.h"
 #include "bus_access.h"
 #include "monitor.h"
-#include "command.h"
+//#include "command.h"
 #include "logging.h"
 
 
@@ -65,7 +65,7 @@ void firq (void);
    multicomp09 uses 0 for periodic timer interrupt
                     1 for uart0 rx interrupt
 */
-void request_irq (unsigned int source)
+void m6809_request_irq (unsigned int source)
 {
 	/* If the interrupt is not masked, generate
 	 * IRQ immediately.  Else, mark it pending and
@@ -82,13 +82,13 @@ void request_irq (unsigned int source)
    An ISR should be designed to process all sources. If
    it does not, the interrupt will re-fire immediately.
 */
-void release_irq (unsigned int source)
+void m6809_release_irq (unsigned int source)
 {
 	irqs_pending &= ~(1 << source);
 }
 
 /* called with source=0 for periodic timer interrupt */
-void request_firq (unsigned int source)
+void m6809_request_firq (unsigned int source)
 {
 	/* If the interrupt is not masked, generate
 	 * IRQ immediately.  Else, mark it pending and
@@ -103,7 +103,7 @@ void request_firq (unsigned int source)
    always cleared in the ISR. That matches an ISR that processes
    to completion
 */
-void release_firq (unsigned int source)
+void m6809_release_firq (unsigned int source)
 {
 	firqs_pending &= ~(1 << source);
 }
@@ -114,7 +114,7 @@ void set_cpu_is_running (void)
 	cpu_running = 1;
 }
 
-int get_cpu_is_running (void)
+int m6809_get_cpu_is_running (void)
 {
 	return(cpu_running);
 }
@@ -131,7 +131,7 @@ static inline void check_stack (void)
 
 
 
-unsigned long get_cycles (void)
+unsigned long m6809_get_cycles (void)
 {
 	return total_nb_cycles_exec + cpu_period - cpu_clk;
 }
@@ -266,7 +266,7 @@ static void indexed (void)			/* note take 1 extra cycle */
 	  cpu_clk -= 8;
 	  break;
 	case 0x0b:
-	  ea = (*R + get_d ()) & 0xffff;
+	  ea = (*R + m6809_get_d ()) & 0xffff;
 	  cpu_clk -= 8;
 	  break;
 	case 0x0c:
@@ -325,7 +325,7 @@ static void indexed (void)			/* note take 1 extra cycle */
 	  cpu_clk -= 2;
 	  break;
 	case 0x1b:
-	  ea = (*R + get_d ()) & 0xffff;
+	  ea = (*R + m6809_get_d ()) & 0xffff;
 	  cpu_clk -= 8;
 	  ea = RDMEM16 (ea);
 	  cpu_clk -= 2;
@@ -376,178 +376,108 @@ static void extended (void)
 
 /* external register functions */
 
-unsigned get_a (void)
+unsigned m6809_get_a (void)
 {
   return A;
 }
 
-unsigned get_b (void)
+unsigned m6809_get_b (void)
 {
   return B;
 }
 
-unsigned get_dp (void)
+unsigned m6809_get_dp (void)
 {
   return DP >> 8;
 }
 
-unsigned get_x (void)
+unsigned m6809_get_x (void)
 {
   return X;
 }
 
-unsigned get_y (void)
+unsigned m6809_get_y (void)
 {
   return Y;
 }
 
-unsigned get_s (void)
+unsigned m6809_get_s (void)
 {
   return S;
 }
 
-unsigned get_u (void)
+unsigned m6809_get_u (void)
 {
   return U;
 }
 
-unsigned get_pc (void)
+unsigned m6809_get_pc (void)
 {
   return PC & 0xffff;
 }
 
-unsigned get_d (void)
+unsigned m6809_get_d (void)
 {
   return (A << 8) | B;
 }
 
-unsigned get_flags (void)
+unsigned m6809_get_flags (void)
 {
   return EFI;
 }
 
-#ifdef H6309
-unsigned get_e (void)
-{
-  return E;
-}
-
-unsigned get_f (void)
-{
-  return F;
-}
-
-unsigned get_w (void)
-{
-  return (E << 8) | F;
-}
-
-unsigned get_q (void)
-{
-  return (get_w () << 16) | get_d ();
-}
-
-unsigned get_v (void)
-{
-  return V;
-}
-
-unsigned get_zero (void)
-{
-  return 0;
-}
-
-unsigned get_md (void)
-{
-  return MD;
-}
-#endif
-
-void set_a (unsigned val)
+void m6809_set_a (unsigned val)
 {
   A = val & 0xff;
 }
 
-void set_b (unsigned val)
+void m6809_set_b (unsigned val)
 {
   B = val & 0xff;
 }
 
-void set_dp (unsigned val)
+void m6809_set_dp (unsigned val)
 {
   DP = (val & 0xff) << 8;
 }
 
-void set_x (unsigned val)
+void m6809_set_x (unsigned val)
 {
   X = val & 0xffff;
 }
 
-void set_y (unsigned val)
+void m6809_set_y (unsigned val)
 {
   Y = val & 0xffff;
 }
 
-void set_s (unsigned val)
+void m6809_set_s (unsigned val)
 {
   S = val & 0xffff;
   check_stack ();
 }
 
-void set_u (unsigned val)
+void m6809_set_u (unsigned val)
 {
   U = val & 0xffff;
 }
 
-void set_pc (unsigned val)
+void m6809_set_pc (unsigned val)
 {
   PC = val & 0xffff;
   check_pc ();
 }
 
-void set_d (unsigned val)
+void m6809_set_d (unsigned val)
 {
   A = (val >> 8) & 0xff;
   B = val & 0xff;
 }
 
-#ifdef H6309
-void set_e (unsigned val)
-{
-  E = val & 0xff;
-}
-
-void set_f (unsigned val)
-{
-  F = val & 0xff;
-}
-
-void set_w (unsigned val)
-{
-  E = (val >> 8) & 0xff;
-  F = val & 0xff;
-}
-
-void set_q (unsigned val)
-{
-  set_w ((val >> 16) & 0xffff);
-  set_d (val & 0xffff);
-}
-
-void set_v (unsigned val)
-{
-  V = val & 0xff;
-}
-
-void set_md (unsigned val)
-{
-  MD = val & 0xff;
-}
-#endif
 
 /* handle condition code register */
 
-unsigned get_cc (void)
+unsigned m6809_get_cc (void)
 {
   unsigned res = EFI & (E_FLAG | F_FLAG | I_FLAG);
 
@@ -565,7 +495,7 @@ unsigned get_cc (void)
   return res;
 }
 
-void set_cc (unsigned arg)
+void m6809_set_cc (unsigned arg)
 {
   EFI = arg & (E_FLAG | F_FLAG | I_FLAG);
   H = (arg & H_FLAG ? 0x10 : 0);
@@ -625,7 +555,7 @@ unsigned get_reg (unsigned nro)
       val = B;
       break;
     case 10:
-      val = get_cc ();
+      val = m6809_get_cc ();
       break;
     case 11:
       val = DP >> 8;
@@ -683,7 +613,7 @@ void set_reg (unsigned nro, unsigned val)
       B = val;
       break;
     case 10:
-      set_cc (val);
+      m6809_set_cc (val);
       break;
     case 11:
       DP = val << 8;
@@ -1145,7 +1075,7 @@ static void pshs (void)
     {
       cpu_clk -= 1;
       S = (S - 1) & 0xffff;
-      write_stack (S, get_cc ());
+      write_stack (S, m6809_get_cc ());
     }
 }
 
@@ -1201,7 +1131,7 @@ static void pshu (void)
     {
       cpu_clk -= 1;
       U = (U - 1) & 0xffff;
-      write_stack (U, get_cc ());
+      write_stack (U, m6809_get_cc ());
     }
 }
 
@@ -1214,7 +1144,7 @@ static void puls (void)
   if (post & 0x01)
     {
       cpu_clk -= 1;
-      set_cc (read_stack (S));
+      m6809_set_cc (read_stack (S));
       S = (S + 1) & 0xffff;
     }
   if (post & 0x02)
@@ -1272,7 +1202,7 @@ static void pulu (void)
   if (post & 0x01)
     {
       cpu_clk -= 1;
-      set_cc (read_stack (U));
+      m6809_set_cc (read_stack (U));
       U = (U + 1) & 0xffff;
     }
   if (post & 0x02)
@@ -1350,7 +1280,7 @@ static void stack_machine_state(int full)
     write_stack(S, A);
   }
   S = (S - 1) & 0xffff;
-  write_stack(S, get_cc());
+  write_stack(S, m6809_get_cc());
 }
 
 static void nop (void)
@@ -1370,8 +1300,8 @@ static void rti (void)
 {
   monitor_return ();
   cpu_clk -= 6;
-  command_exit_irq_hook (get_cycles () - irq_start_time);
-  set_cc (read_stack (S));
+  command_exit_irq_hook (m6809_get_cycles () - irq_start_time);
+  m6809_set_cc (read_stack (S));
   S = (S + 1) & 0xffff;
 
   if ((EFI & E_FLAG) != 0)
@@ -1415,7 +1345,7 @@ void irq (void)
   }
   EFI |= I_FLAG;
 
-  irq_start_time = get_cycles();
+  irq_start_time = m6809_get_cycles();
   change_pc(bus_read16(0xfff8));
 }
 
@@ -1524,7 +1454,7 @@ static void orcc (void)
 {
   unsigned tmp = imm_byte ();
 
-  set_cc (get_cc () | tmp);
+  m6809_set_cc (m6809_get_cc () | tmp);
   cpu_clk -= 3;
 }
 
@@ -1532,7 +1462,7 @@ static void andcc (void)
 {
   unsigned tmp = imm_byte ();
 
-  set_cc (get_cc () & tmp);
+  m6809_set_cc (m6809_get_cc () & tmp);
   cpu_clk -= 3;
 }
 
@@ -1612,7 +1542,7 @@ static void bsr (void)
 }
 
 /* Execute 6809 code for a certain number of cycles. */
-int cpu_execute (int cycles)
+int m6809_execute (int cycles)
 {
 	unsigned opcode;
 	cpu_period = cpu_clk = cycles;
@@ -1835,7 +1765,7 @@ int cpu_execute (int cycles)
 #endif
 	      case 0x83:
 		cpu_clk -= 5;
-		cmp16 (get_d (), imm_word ());
+		cmp16 (m6809_get_d (), imm_word ());
 		break;
 #ifdef H6309
 	      case 0x84:	/* ANDD */
@@ -1872,7 +1802,7 @@ int cpu_execute (int cycles)
 	      case 0x93:
 		direct ();
 		cpu_clk -= 5;
-		cmp16 (get_d (), RDMEM16 (ea));
+		cmp16 (m6809_get_d (), RDMEM16 (ea));
 		cpu_clk--;
 		break;
 	      case 0x9c:
@@ -1894,7 +1824,7 @@ int cpu_execute (int cycles)
 	      case 0xa3:
 		cpu_clk--;
 		indexed ();
-		cmp16 (get_d (), RDMEM16 (ea));
+		cmp16 (m6809_get_d (), RDMEM16 (ea));
 		cpu_clk--;
 		break;
 	      case 0xac:
@@ -1916,7 +1846,7 @@ int cpu_execute (int cycles)
 	      case 0xb3:
 		extended ();
 		cpu_clk -= 6;
-		cmp16 (get_d (), RDMEM16 (ea));
+		cmp16 (m6809_get_d (), RDMEM16 (ea));
 		cpu_clk--;
 		break;
 	      case 0xbc:
@@ -2989,39 +2919,36 @@ cpu_exit:
    return cpu_period;
 }
 
-void cpu_reset (void)
+void m6809_reset (void)
 {
    X = Y = S = U = A = B = DP = 0;
    H = N = OV = C = 0;
    Z = 1;
    EFI = F_FLAG | I_FLAG;
-#ifdef H6309
-   MD = E = F = V = 0;
-#endif
 
    change_pc (bus_read16 (0xfffe));
    set_cpu_is_running ();
 }
 
-void print_regs (void)
+void m6809_print_regs (void)
 {
    char flags[9] = "        \0";
-   if (get_cc() & C_FLAG) flags[0] = 'C';
-   if (get_cc() & V_FLAG) flags[1] = 'V';
-   if (get_cc() & Z_FLAG) flags[2] = 'Z';
-   if (get_cc() & N_FLAG) flags[3] = 'N';
-   if (get_cc() & I_FLAG) flags[4] = 'I';
-   if (get_cc() & H_FLAG) flags[5] = 'H';
-   if (get_cc() & F_FLAG) flags[6] = 'F';
-   if (get_cc() & E_FLAG) flags[7] = 'E';
+   if (m6809_get_cc() & C_FLAG) flags[0] = 'C';
+   if (m6809_get_cc() & V_FLAG) flags[1] = 'V';
+   if (m6809_get_cc() & Z_FLAG) flags[2] = 'Z';
+   if (m6809_get_cc() & N_FLAG) flags[3] = 'N';
+   if (m6809_get_cc() & I_FLAG) flags[4] = 'I';
+   if (m6809_get_cc() & H_FLAG) flags[5] = 'H';
+   if (m6809_get_cc() & F_FLAG) flags[6] = 'F';
+   if (m6809_get_cc() & E_FLAG) flags[7] = 'E';
 
    printf (" X: 0x%04X  [X]: 0x%04X    Y: 0x%04X  [Y]: 0x%04X    ",
-            get_x(), bus_read16(get_x()), get_y(), bus_read16(get_y()) );
+            m6809_get_x(), bus_read16(m6809_get_x()), m6809_get_y(), bus_read16(m6809_get_y()) );
    printf ("PC: 0x%04X [PC]: 0x%04X\n",
-            get_pc(), bus_read16(get_pc()) );
+            m6809_get_pc(), bus_read16(m6809_get_pc()) );
    printf (" U: 0x%04X  [U]: 0x%04X    S: 0x%04X  [S]: 0x%04X    ",
-            get_u(), bus_read16(get_u()), get_s(), bus_read16(get_s()) );
-   printf ("DP: 0x%02X\n", get_dp() );
+            m6809_get_u(), bus_read16(m6809_get_u()), m6809_get_s(), bus_read16(m6809_get_s()) );
+   printf ("DP: 0x%02X\n", m6809_get_dp() );
    printf (" A: 0x%02X      B: 0x%02X    [D]: 0x%04X   CC: %s\n",
-            get_a(), get_b(), bus_read16(get_d()), flags );
+            m6809_get_a(), m6809_get_b(), bus_read16(m6809_get_d()), flags );
 }

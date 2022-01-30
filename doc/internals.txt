@@ -21,8 +21,8 @@ Initialisation des tables de symboles sym_init (); symtab.h
 Initialisation de la machine basé sur son nom machine_init; machine.h
 Chargement du fichier map load_map_file(); monitor.h
 Si pas d'exec passé en ligne de commande, passage en mode debug
-Sinon, reset cpu cpu_reset(); 6809.h (init des registres, sette le PC à la valeur par défaut puis cpu_is_running(); machine.h indique que le CPU est lancé
-Appel a monitor_init(); 6809.h
+Sinon, reset cpu m6809_reset(); m6809.h (init des registres, sette le PC à la valeur par défaut puis cpu_is_running(); machine.h indique que le CPU est lancé
+Appel a monitor_init(); m6809.h
 Appel a command_init(); command.h
 keybuffering ?
 
@@ -30,7 +30,7 @@ On boucle
 
 machine_update() fonction de la machine émulé appelé chaque cycle
 Si option -I tout les x ticks on appelle machine_tick() qui est une fonctione de la machien
-sinon on fait cpu_execute() pour un certain nombre de cycles (1024 par défaut) 6809.h
+sinon on fait m6809_execute() pour un certain nombre de cycles (1024 par défaut) m6809.h
 puis on se resynchronise avec le temps actuel idle_loop main.c
 
 Si un nombre max de cycles a été précisé on s'arrete quand on l'atteint

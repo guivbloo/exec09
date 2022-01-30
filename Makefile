@@ -1,4 +1,4 @@
-SRCS=6809.c \
+SRCS=m6809.c \
 	device_rom.c device_ram.c logging.c\
 	device_mc6850.c device.c debugger.c\
 	monitor.c  symtab.c  command.c simulator.c main.c\

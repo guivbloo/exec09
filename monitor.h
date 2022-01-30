@@ -2,7 +2,6 @@
 #define MONITOR_H
 
 #include <stdio.h>
-#include "6809.h"
 #include "types.h"
 
 struct cpu_regs {

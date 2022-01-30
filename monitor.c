@@ -951,17 +951,17 @@ int dasm (char *buf, absolute_address_t opc)
   absolute_address_t tmp;
 
 
-  op = fetch8();
+  op = bus_read8_abs (pc++);
   
   if (op == 0x10) /* prefix for PAGE2 opcodes */
     {
-      op = fetch8();
+      op = bus_read8_abs (pc++);
       am = codes10[op].mode;
       op = codes10[op].code;
     }
   else if (op == 0x11) /* prefix for PAGE3 opcodes */
     {
-      op = fetch8();
+      op = bus_read8_abs (pc++);
       am = codes11[op].mode;
       op = codes11[op].code;
     }
@@ -974,7 +974,7 @@ int dasm (char *buf, absolute_address_t opc)
   op_str = mne[op];
   if ((!strcmp("SWI2", op_str)) && sim_get_os9call())
     {
-      op = fetch8();
+      op = bus_read8_abs (pc++);
       if(op < 0x91)
         {
           buf += sprintf (buf, "%-6.6s%s", "OS9", os9syscall[op]);
@@ -996,20 +996,22 @@ int dasm (char *buf, absolute_address_t opc)
     case _implied:
       break;
     case _imm_byte:
-      sprintf (buf, "#$%02X", fetch8 ());
+      sprintf (buf, "#$%02X", bus_read8_abs (pc++));
       break;
     case _imm_word:
-      sprintf (buf, "#$%04X", fetch16 ());
+      pc += 2;
+      sprintf (buf, "#$%04X", bus_read16_abs(pc-2));
       break;
     case _direct:
-      sprintf (buf, "<%s", monitor_addr_name (fetch8 ()));
+      sprintf (buf, "<%s", monitor_addr_name (bus_read8_abs (pc++)));
       break;
     case _extended:
-      sprintf (buf, "%s", monitor_addr_name (fetch16 ()));
+      pc += 2;
+      sprintf (buf, "%s", monitor_addr_name (bus_read16_abs(pc-2)));
       break;
 
     case _indexed:
-      op = fetch8 ();
+      op = bus_read8_abs (pc++);
       R = index_reg[(op >> 5) & 0x3];
 
       if ((op & 0x80) == 0)
@@ -1042,19 +1044,21 @@ int dasm (char *buf, absolute_address_t opc)
 	  sprintf (buf, "A,%c", R);
 	  break;
 	case 0x08:
-	  sprintf (buf, "$%02X,%c", fetch8 (), R);
+	  sprintf (buf, "$%02X,%c", bus_read8_abs (pc++), R);
 	  break;
 	case 0x09:
-	  sprintf (buf, "$%04X,%c", fetch16 (), R);
+    pc += 2;
+	  sprintf (buf, "$%04X,%c", bus_read16_abs(pc-2), R);
 	  break;
 	case 0x0B:
 	  sprintf (buf, "D,%c", R);
 	  break;
 	case 0x0C:
-	  sprintf (buf, "$%02X,PC", fetch8 ());
+	  sprintf (buf, "$%02X,PC", bus_read8_abs (pc++));
 	  break;
 	case 0x0D:
-	  sprintf (buf, "$%04X,PC", fetch16 ());
+    pc += 2;
+	  sprintf (buf, "$%04X,PC", bus_read16_abs(pc-2));
 	  break;
 	case 0x11:
 	  sprintf (buf, "[,%c++]", R);
@@ -1072,22 +1076,25 @@ int dasm (char *buf, absolute_address_t opc)
 	  sprintf (buf, "[A,%c]", R);
 	  break;
 	case 0x18:
-	  sprintf (buf, "[$%02X,%c]", fetch8 (), R);
+	  sprintf (buf, "[$%02X,%c]", bus_read8_abs (pc++), R);
 	  break;
 	case 0x19:
-	  sprintf (buf, "[$%04X,%c]", fetch16 (), R);
+    pc += 2;
+	  sprintf (buf, "[$%04X,%c]", bus_read16_abs(pc-2), R);
 	  break;
 	case 0x1B:
 	  sprintf (buf, "[D,%c]", R);
 	  break;
 	case 0x1C:
-	  sprintf (buf, "[$%02X,PC]", fetch8());
+	  sprintf (buf, "[$%02X,PC]", bus_read8_abs (pc++));
 	  break;
 	case 0x1D:
-	  sprintf (buf, "[$%04X,PC]", fetch16());
+    pc += 2; 
+	  sprintf (buf, "[$%04X,PC]", bus_read16_abs(pc-2));
 	  break;
 	case 0x1F:
-	  sprintf (buf, "[%s]", monitor_addr_name (fetch16()));
+    pc += 2;
+	  sprintf (buf, "[%s]", monitor_addr_name (bus_read16_abs(pc-2)));
 	  break;
 	default:
 	  sprintf (buf, "???");
@@ -1096,23 +1103,24 @@ int dasm (char *buf, absolute_address_t opc)
       break;
 
     case _rel_byte:
-           fetch1 = ((INT8) fetch8 ());
+           fetch1 = ((INT8) bus_read8_abs (pc++));
 	   sprintf (buf, "%s", absolute_addr_name (fetch1 + pc));
       break;
 
     case _rel_word:
-           tmp = fetch16();
+          pc +=2;
+           tmp = bus_read16_abs(pc-2);
            sprintf (buf, "%s", absolute_addr_name (pc + tmp));
       break;
 
     case _reg_post:
-      op = fetch8 ();
+      op = bus_read8_abs (pc++);
       sprintf (buf, "%s,%s", reg[op >> 4], reg[op & 15]);
       break;
 
     case _usr_post:
     case _sys_post:
-      op = fetch8 ();
+      op = bus_read8_abs (pc++);
 
       if (op & 0x80)
 	strcat (buf, "PC,");
@@ -1368,12 +1376,12 @@ void monitor_call (unsigned int flags)
 	if (current_function_call <= &fctab[MAX_FUNCTION_CALLS-1])
 	{
 		current_function_call++;
-		current_function_call->entry_point = get_pc ();
+		current_function_call->entry_point = m6809_get_pc ();
 		current_function_call->flags = flags;
 	}
 #endif
 #if 0
-	const char *id = sym_lookup (&program_symtab, to_absolute (get_pc ()));
+	const char *id = sym_lookup (&program_symtab, to_absolute (m6809_get_pc ()));
 	if (id)
 	{
 		// printf ("In %s now\n", id);

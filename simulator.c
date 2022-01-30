@@ -160,7 +160,7 @@ int sim_init()
 int sim_run()
 {
 /* Now, iterate through the instructions.
-           Without -I, we can just call cpu_execute() and let it run
+           Without -I, we can just call m6809_execute() and let it run
            for a long time; otherwise, we need to come back here
            periodically and call the machine's ->tick() routine */
         //[NAC HACK 2017Mar30] need to schedule this properly instead of this one-or-the-other approach
@@ -187,10 +187,10 @@ int sim_run()
 
 		/* Check for a rogue program that won't end */
 		/*
-		if ((max_cycles > 0) && (get_cycles() > max_cycles))
+		if ((max_cycles > 0) && (m6809_get_cycles() > max_cycles))
 		{
 			sim_error ("maximum cycle count exceeded at %s\n",
-				monitor_addr_name (get_pc ()));
+				monitor_addr_name (m6809_get_pc ()));
 		}
 		*/
 	} while(debugger_get_exitcmd() != TRUE);
@@ -237,7 +237,7 @@ void sim_exit (uint8_t exit_code)
 	/*
 	if (dump_cycles_on_success)
 	{
-		printf ("%s : %ld cycles, %ld ms\n", prog_name, get_cycles (),
+		printf ("%s : %ld cycles, %ld ms\n", prog_name, m6809_get_cycles (),
 			get_elapsed_realtime ());
 	}
 	*/
@@ -248,7 +248,7 @@ void sim_exit (uint8_t exit_code)
 		FILE *fp = fopen (s, "a");
 		if (fp)
 		{
-			fprintf (fp, "%s : %ld cycles, %ld ms\n", prog_name, get_cycles (),
+			fprintf (fp, "%s : %ld cycles, %ld ms\n", prog_name, m6809_get_cycles (),
 				get_elapsed_realtime ());
 			fclose (fp);
 		}
