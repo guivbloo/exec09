@@ -7,7 +7,7 @@
 #include "m6809.h"
 #include "bus_access.h"
 #include "monitor.h"
-//#include "command.h"
+#include "command.h"
 #include "logging.h"
 
 
