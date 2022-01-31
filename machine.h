@@ -77,7 +77,7 @@ int machine_dump_thread(void);
 void machine_describe (void);
 void machine_update (void);
 void machine_periodic (void);
-void machine_tick (void);
+void machine_tick (unsigned long nb_cycles);
 int machine_run (int cycles);
 void machine_reset (void);
 unsigned long machine_get_cycles (void);

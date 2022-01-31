@@ -37,6 +37,10 @@ struct hw_class
 	whatever purpose.  The minimum update interval is once per 1ms.  Leave
 	NULL if not required */
 	void (*update) (struct hw_device *dev);
+
+	/* Update procedure called at every tick or giving the number of ticks elapsed since 
+	previous activation */
+	void (*tick) (struct hw_device *dev, int cycles);
 	
 	/* Dump procedure. This can be used to get memory dump of the device */
 	void (*dump) (struct hw_device *dev);

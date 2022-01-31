@@ -264,9 +264,15 @@ unsigned long machine_get_cycles (void)
 	return m6809_get_cycles();
 }
 
-void machine_tick (void)
+void machine_tick (unsigned long nb_cycles)
 {
-	return;
+	int i;
+	for (i=0; i < device_count; i++)
+	{
+		struct hw_device *dev = device_table[i];
+		if (dev->class_ptr->tick)
+			dev->class_ptr->tick (dev, nb_cycles);
+	}
 }
 
 int machine_match (const char *machine_name, machine_t *m)

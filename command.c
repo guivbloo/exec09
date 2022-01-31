@@ -1865,4 +1865,5 @@ BOOLEAN command_get_exitcmd(void)
 {
    if(exit_command == 0)
       return TRUE;
+   return FALSE;
 }

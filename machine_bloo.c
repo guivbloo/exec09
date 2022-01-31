@@ -5,6 +5,7 @@
 #include "machine.h"
 #include "device.h"
 #include "device_mc6850.h"
+#include "device_mc6840.h"
 #include "device_ram.h"
 #include "device_rom.h"
 #include "machine_bloo.h"
@@ -17,6 +18,7 @@
  *
  * 48KByte of RAM at $0000
  * 6850 at $C000, $C001
+ * 6840 at $C080, ...
  * 12KByte of ROM at $D000
  ********************************************************************/
 
@@ -25,6 +27,7 @@
  void bloo_init (const char *boot_rom_file)
 {
    	struct hw_device *uart;
+	struct hw_device *ptm;
 	struct hw_device *rom;
 	struct hw_device *ram;
 
@@ -37,6 +40,11 @@
 	uart = mc6850_create(BLOO_UART_SIZE);
 	machine_attach_device(uart);
     machine_map_device (uart, 0, BLOO_UART_BASE, BLOO_UART_SIZE, MAP_READWRITE);
+
+	/* From $C080 to  $C08x for 6850 */
+	ptm = m6840_create(BLOO_PTM_SIZE);
+	machine_attach_device(ptm);
+    machine_map_device (ptm, 0, BLOO_PTM_BASE, BLOO_PTM_SIZE, MAP_READWRITE);
 	
 	/* 12K ROM from D000 to FFFF */
     rom = rom_create (boot_rom_file, BLOO_ROM_SIZE);

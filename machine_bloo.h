@@ -14,6 +14,8 @@
 #define BLOO_UART_SIZE 0x0080
 #define BLOO_UART_BASE 0xC000
 
+#define BLOO_PTM_SIZE 0x0080
+#define BLOO_PTM_BASE 0xC080
 
 
 #endif /* MACHINE_BLOO_H */

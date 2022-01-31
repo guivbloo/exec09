@@ -23,7 +23,7 @@ unsigned int sim_freq = 1;
    triggered periodically, every so many cycles. Typically this is
    used by the machine to generate a timer interrupt. Off By default.
 */
-unsigned int cycles_per_tick = 0;
+unsigned int cycles_per_tick = 10;
 
 /* Nonzero if debugging support is turned on */
 BOOLEAN debug_enabled = FALSE;
@@ -165,11 +165,11 @@ int sim_run()
            periodically and call the machine's ->tick() routine */
         //[NAC HACK 2017Mar30] need to schedule this properly instead of this one-or-the-other approach
         //.. need to track the rate of each and work out who's next.
+	unsigned long nb_cycles;
 	do
 	{
 		/* Call each device that needs periodic processing. */
 		machine_update ();
-		log_message(DEBUG, "Run");
 		if (cycles_per_tick == 0)
 		{
 			/* Simulate some CPU time, either 1ms worth or up to the
@@ -178,8 +178,8 @@ int sim_run()
 		}
 		else
 		{
-			machine_run (cycles_per_tick);
-			machine_tick ();
+			nb_cycles = machine_run (cycles_per_tick);
+			machine_tick (nb_cycles);
 		}
 
 		/* Align with real time*/
