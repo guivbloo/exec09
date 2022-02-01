@@ -41,10 +41,11 @@
 	machine_attach_device(uart);
     machine_map_device (uart, 0, BLOO_UART_BASE, BLOO_UART_SIZE, MAP_READWRITE);
 
-	/* From $C080 to  $C08x for 6850 */
+	/* From $C080 to  $C08x for 6840 */
 	ptm = m6840_create(BLOO_PTM_SIZE);
 	machine_attach_device(ptm);
     machine_map_device (ptm, 0, BLOO_PTM_BASE, BLOO_PTM_SIZE, MAP_READWRITE);
+	machine_attach_irq (ptm);
 	
 	/* 12K ROM from D000 to FFFF */
     rom = rom_create (boot_rom_file, BLOO_ROM_SIZE);
@@ -60,4 +61,6 @@ machine_t bloo_machine =
 	.fault = NULL,
 	.init = bloo_init,
 	.dump = NULL,
+	.irq = NULL,
+	.firq = NULL,
 };

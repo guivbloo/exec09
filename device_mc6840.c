@@ -32,15 +32,18 @@ static void m6840_calc_irq(struct m6840 *ptm)
 {
     int irq = 0;
     /* Turn our internal events for overflow into status bits */
-    if (ptm->timer[1].event) {
+    if (ptm->timer[1].event) 
+    {
         ptm->timer[1].event = 0;
         ptm->sr |= 1;
     }
-    if (ptm->timer[2].event) {
+    if (ptm->timer[2].event) 
+    {
         ptm->timer[2].event = 0;
         ptm->sr |= 2;
     }
-    if (ptm->timer[3].event) {
+    if (ptm->timer[3].event) 
+    {
         ptm->timer[3].event = 0;
         ptm->sr |= 4;
     }
@@ -55,8 +58,9 @@ static void m6840_calc_irq(struct m6840 *ptm)
     ptm->sr |= irq;
 }
 
-int m6840_irq_pending(struct m6840 *ptm)
+uint8_t m6840_irq_pending(struct hw_device *dev)
 {
+    struct m6840 *ptm = (struct m6840 *)dev->priv;
     return ptm->sr & 0x80;
 }
 
@@ -68,12 +72,14 @@ static void m6840_calc_outputs(struct m6840 *ptm)
     unsigned int output = 0;
     int i;
     struct ptm_timer *p = &ptm->timer[1];
-    for (i = 0; i <= 2; i++) { 
+    for (i = 0; i <= 2; i++) 
+    { 
         if (p->output && (p->ctrl & 0x80))
             output |= (1 << i);
         p++;
     }
-    if (output != ptm->lastout) {
+    if (output != ptm->lastout) 
+    {
         ptm->lastout = output;
         //m6840_output_change(ptm, output);
     }
@@ -82,24 +88,32 @@ static void m6840_calc_outputs(struct m6840 *ptm)
 /* Count a timer in 16 or 8x8 bit mode */
 static void m6840_timer_count(struct ptm_timer *p, int restart)
 {
-    if (p->ctrl & 0x04) {
+    if (p->ctrl & 0x04) 
+    {
         /* The check occurs before the count down */
-        if (p->timer == 0) {
+        if (p->timer == 0) 
+        {
             p->event = 1;
             p->output ^= 1;
             if (p->event && restart)
                 p->timer = p->wlatch;
         }
         p->timer--;
-    } else {
+    } 
+    else 
+    {
         if ((p->timer & 0xFF) != 0)
             p->timer--;
-        else {
+        else 
+        {
             p->timer &= 0xFF00;
-            if (p->timer) {
+            if (p->timer) 
+            {
                 p->timer -= 0x0100;
                 p->timer |= p->wlatch & 0xFF;
-            } else {
+            } 
+            else 
+            {
                 p->event = 1;
                 if (restart)
                     p->timer = p->wlatch;
@@ -119,7 +133,8 @@ static void m6840_timer_count(struct ptm_timer *p, int restart)
  */
 static void m6840_timer_clock(struct ptm_timer *p)
 {
-    switch((p->ctrl >> 3) & 7) {
+    switch((p->ctrl >> 3) & 7) 
+    {
         case 0:	/* Continuous */
             m6840_timer_count(p, 1);
             break;
@@ -164,8 +179,8 @@ static void m6840_timer_tick(struct ptm_timer *p)
 void m6840_tick(struct hw_device *dev, int tstates)
 {
 	struct m6840 *ptm = (struct m6840 *)dev->priv;
-	printf("called\n");
-    while(tstates--) {
+    while(tstates--) 
+    {
         m6840_timer_tick(&ptm->timer[1]);
         m6840_timer_tick(&ptm->timer[2]);
         m6840_timer_tick(&ptm->timer[3]);
@@ -178,7 +193,8 @@ void m6840_tick(struct hw_device *dev, int tstates)
 void m6840_external_clock(struct m6840 *ptm, int timer)
 {
     /* Timer 3 has an external pre-scaler option */
-    if (timer == 3 && (ptm->timer[3].ctrl & 0x01)) {
+    if (timer == 3 && (ptm->timer[3].ctrl & 0x01)) 
+    {
         ptm->prescale++;
         ptm->prescale &= 7;
         if (ptm->prescale)
@@ -192,7 +208,8 @@ void m6840_external_clock(struct m6840 *ptm, int timer)
 /* High to low transition on gate */    
 void m6840_external_gate(struct m6840 *ptm, int gate)
 {
-    if (ptm->timer[gate].ctrl & 8) {
+    if (ptm->timer[gate].ctrl & 8) 
+    {
         ptm->timer[gate].timer = ptm->timer[gate].wlatch;
         /* IRQ clear ? */
     }
@@ -200,9 +217,9 @@ void m6840_external_gate(struct m6840 *ptm, int gate)
 
 static void m6840_soft_reset(struct m6840 *ptm)
 {
-    ptm->timer[0].timer = ptm->timer[0].wlatch;
-    ptm->timer[1].timer = ptm->timer[0].wlatch;
-    ptm->timer[2].timer = ptm->timer[0].wlatch;
+    ptm->timer[1].timer = ptm->timer[1].wlatch;
+    ptm->timer[2].timer = ptm->timer[2].wlatch;
+    ptm->timer[3].timer = ptm->timer[3].wlatch;
     m6840_calc_irq(ptm);
 }
 
@@ -213,16 +230,18 @@ void m6840_update (struct hw_device *dev)
 
 void m6840_dump(struct hw_device *dev)
 {
-	struct m6840 *timer = (struct m6840 *)dev->priv;
-	printf("--- M6840 dump --- \n");
+	struct m6840 *ptm = (struct m6840 *)dev->priv;
+	printf("-- M6840 registers --\n");
+	printf("CR1: 0x%02X  CR2: 0x%02X  CR3: 0x%02X  SR: 0x%02X\n", ptm->timer[1].ctrl, ptm->timer[2].ctrl, ptm->timer[3].ctrl, ptm->sr);
+    printf("T1: 0x%04X  T2: 0x%04X  T3: 0x%04X\n", ptm->timer[1].timer, ptm->timer[2].timer, ptm->timer[3].timer);
 }
 
 void m6840_reset (struct hw_device *dev)
 {
 	struct m6840 *ptm = (struct m6840 *)dev->priv;
-    ptm->timer[0].wlatch = 0xFFFF;
     ptm->timer[1].wlatch = 0xFFFF;
     ptm->timer[2].wlatch = 0xFFFF;
+    ptm->timer[3].wlatch = 0xFFFF;
     m6840_soft_reset(ptm);
     ptm->lastout = 0x100;	/* Impossible value to force update */
 }
@@ -253,15 +272,16 @@ void m6840_write (struct hw_device *dev, unsigned long addr, uint8_t val)
     addr &= 7;
     if (addr > 1) 
 	{
-        if ((addr & 1) == 0)
+        if ((addr & 1) == 0) /* Write MSB buffer register */
             ptm->msb = val;
         else 
 		{
             addr >>= 1;
             p = &ptm->timer[addr];
-            p->wlatch = (ptm->msb << 8) | val;
+            p->wlatch = (ptm->msb << 8) | val; /* p.wlatch contains new timer value
             /* Writing the timer also clears the interrupt if CR3/4 are 0 */
-            if ((p->ctrl & 0x18) == 0x00) {
+            if ((p->ctrl & 0x18) == 0x00) 
+            {
                 p->timer = p->wlatch;
                 p->output = 0;
                 ptm->sr &= ~(1 << addr);
@@ -271,10 +291,18 @@ void m6840_write (struct hw_device *dev, unsigned long addr, uint8_t val)
         }
         return;
     }
-    if (addr == 0 && (ptm->timer[2].ctrl & 0x1))
-        addr = 3;
+    if (addr == 1)
+    {
+        addr = 2;
+        printf("write\n");
+    }
     else
-        addr = 1;
+    {
+        if (addr == 0 && (ptm->timer[2].ctrl & 0x1))
+            addr = 1;
+        else
+            addr = 3;
+    }
     ptm->timer[addr].ctrl = val;
     /* Effects of control changes */
     if (addr == 1 && (val & 1))
@@ -292,6 +320,7 @@ struct hw_class m6840_class =
 	.update = m6840_update,
 	.tick = m6840_tick,
 	.dump = m6840_dump,
+    .check_interrupt = m6840_irq_pending,
 };
 
 struct hw_device *m6840_create (unsigned long size)

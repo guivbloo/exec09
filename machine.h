@@ -1,7 +1,7 @@
 #ifndef MACHINE_H
 #define MACHINE_H
 
-
+#include "types.h"
 #include "device.h"
 
 
@@ -67,6 +67,8 @@ typedef struct
 	void (*dump) (void);
 	void (*tick) (void);
 	void (*update) (void);
+	uint8_t (*irq) (void);
+	uint8_t (*firq) (void);
 	unsigned long cycles_per_sec;
 } machine_t;
 
@@ -80,6 +82,11 @@ void machine_periodic (void);
 void machine_tick (unsigned long nb_cycles);
 int machine_run (int cycles);
 void machine_reset (void);
+unsigned int machine_check_irq (void);
+unsigned int machine_check_firq (void);
+void machine_attach_irq (struct hw_device *dev);
+void machine_attach_firq (struct hw_device *dev);
+
 unsigned long machine_get_cycles (void);
 struct bus_map *machine_find_map (unsigned int addr);
 struct hw_device *machine_find_device (unsigned int addr, unsigned char id);

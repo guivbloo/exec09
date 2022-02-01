@@ -179,7 +179,7 @@ int sim_run()
 		else
 		{
 			nb_cycles = machine_run (cycles_per_tick);
-			machine_tick (nb_cycles);
+			
 		}
 
 		/* Align with real time*/

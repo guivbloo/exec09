@@ -44,6 +44,9 @@ struct hw_class
 	
 	/* Dump procedure. This can be used to get memory dump of the device */
 	void (*dump) (struct hw_device *dev);
+
+	/* Check if an interrupt fired */
+	uint8_t (*check_interrupt) (struct hw_device *dev);
 };
 
 

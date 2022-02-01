@@ -32,6 +32,7 @@ struct hw_class ram_class =
 	.read = ram_read,
 	.write = ram_write,
 	.dump = NULL,
+	.check_interrupt = NULL,
 };
 
 struct hw_device *ram_create (unsigned long size)

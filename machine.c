@@ -12,14 +12,30 @@
 machine_t *machine;
 
 unsigned int device_count = 0;
+unsigned int irq_count = 0;
+unsigned int firq_count = 0;
 struct hw_device *device_table[MAX_BUS_DEVICES];
 
 struct hw_device *null_device;
 
 struct bus_map busmaps[NUM_BUS_MAPS];
-
 struct bus_map default_busmaps[NUM_BUS_MAPS];
 
+unsigned int irq_map[MAX_BUS_DEVICES];
+unsigned int firq_map[MAX_BUS_DEVICES];
+
+
+void machine_attach_irq (struct hw_device *dev)
+{
+	irq_map[irq_count] = dev->devid;
+	irq_count++;
+}
+
+void machine_attach_firq (struct hw_device *dev)
+{
+	firq_map[firq_count] = dev->devid;
+	firq_count++;
+}
 
 
 void do_fault (unsigned int addr, unsigned int type)
@@ -132,25 +148,63 @@ struct hw_device *machine_find_device (unsigned int addr, unsigned char id)
 	return device_table[id];
 }
 
-
-// Dump machine (if supported)
 void machine_dump(void)
 {
-	/*
-    if (machine->dump) {
+	int i;
+    if (machine->dump) 
+	{
         machine->dump();
     }
-    else {
-        printf("This machine does not provide a dump capability\n");
-    }
-	*/
-	int i;
 	for (i=0; i < device_count; i++)
 	{
 		struct hw_device *dev = device_table[i];
 		if (dev->class_ptr->dump)
 			dev->class_ptr->dump (dev);
 	}
+}
+
+unsigned int machine_check_irq(void)
+{
+	uint8_t rc = 0;
+	int i;
+	unsigned int devid_value;
+	struct hw_device *dev;
+    if (machine->irq) 
+	{
+        machine->irq();
+    }
+	for (i=0; i < irq_count; i++)
+	{
+		devid_value = irq_map[i];
+		dev = device_table[devid_value];
+		if (dev->class_ptr->check_interrupt)
+			if(dev->class_ptr->check_interrupt (dev) > 0)
+				return devid_value;
+	}
+	return 0;
+
+}
+
+unsigned int machine_check_firq(void)
+{
+	uint8_t rc = 0;
+	int i;
+	unsigned int devid_value;
+	struct hw_device *dev;
+    if (machine->firq) 
+	{
+        machine->firq();
+    }
+	for (i=0; i < firq_count; i++)
+	{
+		devid_value = firq_map[i];
+		dev = device_table[devid_value];
+		if (dev->class_ptr->check_interrupt)
+			if(dev->class_ptr->check_interrupt (dev) > 0)
+				return devid_value;
+	}
+	return 0;
+
 }
 
 void machine_reset (void)
@@ -171,6 +225,7 @@ void machine_describe (void)
 {
 	unsigned int devno;
 	unsigned int mapno;
+	unsigned int irqno;
 	unsigned int prev_devid = -1;
 	unsigned int prev_offset = 0;
 	unsigned int prev_flags = 0;
@@ -182,8 +237,20 @@ void machine_describe (void)
 	/* devices */
 	for (devno = 0; devno < device_count; devno++)
 	{
-		printf("Device %2d: %s\n",devno, device_table[devno]->class_ptr->name);
+		printf("Device %2d: %s",devno, device_table[devno]->class_ptr->name);
+		for (irqno =  0; irqno < irq_count; irqno++)
+		{
+			if (irq_map[irqno] == devno)
+				printf(" (IRQ)");
+		}
+		for (irqno =  0; irqno < firq_count; irqno++)
+		{
+			if (firq_map[irqno] == devno)
+				printf(" (FIRQ)");
+		}
+		printf("\n");
 	}
+
 
 	/* mapping */
 	for (mapno = 0; mapno < NUM_BUS_MAPS; mapno++)
@@ -232,7 +299,17 @@ void machine_fault (unsigned int addr, unsigned char type)
 
 int machine_run (int cycles)
 {
-	return m6809_execute(cycles);
+	unsigned int irq_source;
+	unsigned long nb_cycles;
+	irq_source = machine_check_irq();
+	if(irq_source > 0)
+	{
+		m6809_request_irq(irq_source);
+		printf("irq requested\n");
+	}
+	nb_cycles = m6809_execute(cycles);
+	machine_tick (nb_cycles);
+	return(nb_cycles);
 }
 
 
@@ -300,6 +377,16 @@ void machine_init (const char *machine_name, const char *boot_rom_file)
 	memset (busmaps, 0, sizeof (busmaps));
 	for (i = 0; i < NUM_BUS_MAPS; i++)
 		busmaps[i].devid = INVALID_DEVID;
+
+	/* Initialize IRQ maps */
+	memset (irq_map, 0, sizeof (irq_map));
+	for (i = 0; i < MAX_BUS_DEVICES; i++)
+		irq_map[i] = INVALID_DEVID;
+
+	/* Initialize FIRQ maps */
+	memset (firq_map, 0, sizeof (firq_map));
+	for (i = 0; i < MAX_BUS_DEVICES; i++)
+		firq_map[i] = INVALID_DEVID;
 
 	if (machine_match (machine_name, &bloo_machine))
 	{

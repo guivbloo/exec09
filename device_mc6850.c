@@ -107,6 +107,7 @@ struct hw_class mc6850_class =
     .read = mc6850_read,
     .write = mc6850_write,
     .dump = NULL,
+    .check_interrupt = NULL,
   };
 
 

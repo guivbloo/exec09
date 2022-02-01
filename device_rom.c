@@ -31,6 +31,7 @@ struct hw_class rom_class =
 	.read = rom_read,
 	.write = rom_write,
 	.dump = NULL,
+	.check_interrupt = NULL,
 };
 
 struct hw_device *rom_create (const char *filename, unsigned int maxsize)
