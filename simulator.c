@@ -10,35 +10,26 @@
 #include "debugger.h"
 #include "logging.h"
 #include "symtab.h"
-
-#define INT_MAX 0
+#include "device_m6850.h"
 
 /* Nonzero if SWI2 should be reported with a postbyte */
 int os9call = 0;
 
 /* The frequency of the emulated CPU, in megahertz */
-unsigned int sim_freq = 1;
+unsigned int sim_freq = 4;
 
-/* When nonzero, indicates that the machine's tick routine should be
+/* Indicates that the machine's tick routine should be
    triggered periodically, every so many cycles. Typically this is
-   used by the machine to generate a timer interrupt. Off By default.
+   used by the machine to generate a timer interrupt.
 */
 unsigned int cycles_per_tick = 10;
 
 /* Nonzero if debugging support is turned on */
 BOOLEAN debug_enabled = FALSE;
 
-/* When nonzero, causes the program to print the total number of cycles
-on a successful exit. */
-int dump_cycles_on_success = 0;
-
 /* When nonzero, indicates the total number of cycles before an automated
 exit.  This is to help speed through test cases that never finish. */
-int max_cycles = INT_MAX;
-
-/* When nonzero, says that the state of the machine is persistent
-across runs of the simulator. */
-int machine_persistent = 0;
+int max_cycles = 0;
 
 /* The file to be loaded is a .bin file */
 BOOLEAN binary = FALSE;
@@ -60,7 +51,7 @@ BOOLEAN sim_get_debug_status()
 
 void sim_set_binary(BOOLEAN bool)
 {
-        binary = bool;
+    binary = bool;
 } 
 
 void sim_set_machine_name(char *name)
@@ -157,45 +148,34 @@ int sim_init()
 	debugger_init ();
 }
 
+void sim_console()
+{
+	uint8_t val;
+	while(m6850_kbhit())
+	{
+		val = m6850_getchar();
+		printf("(csl) <- 0x%02X\n", val);
+	}
+
+}
+
 int sim_run()
 {
-/* Now, iterate through the instructions.
-           Without -I, we can just call m6809_execute() and let it run
-           for a long time; otherwise, we need to come back here
-           periodically and call the machine's ->tick() routine */
-        //[NAC HACK 2017Mar30] need to schedule this properly instead of this one-or-the-other approach
-        //.. need to track the rate of each and work out who's next.
-	unsigned long nb_cycles;
+	unsigned long nb_cycles = 0;
 	do
 	{
-		/* Call each device that needs periodic processing. */
-		machine_update ();
-		if (cycles_per_tick == 0)
-		{
-			/* Simulate some CPU time, either 1ms worth or up to the
-			next possible tick */
-			machine_run (sim_freq * 1000);
-		}
-		else
-		{
-			nb_cycles = machine_run (cycles_per_tick);
-			
-		}
 
+		nb_cycles += machine_run (cycles_per_tick);
+		sim_console();
 		/* Align with real time*/
 		idle_loop ();
 
-		/* Check for a rogue program that won't end */
-		/*
-		if ((max_cycles > 0) && (m6809_get_cycles() > max_cycles))
-		{
-			sim_error ("maximum cycle count exceeded at %s\n",
-				monitor_addr_name (m6809_get_pc ()));
-		}
-		*/
+
+		if ((max_cycles > 0) && (nb_cycles > max_cycles))
+			return (1);
+
 	} while(debugger_get_exitcmd() != TRUE);
-	log_message(DEBUG, "Exiting");
-	sim_exit (0);
+	printf("Exiting after %lu cycles in %ld ms\n", nb_cycles, get_elapsed_realtime());
 	return 0;
 }
 

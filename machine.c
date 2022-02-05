@@ -305,10 +305,10 @@ int machine_run (int cycles)
 	if(irq_source > 0)
 	{
 		m6809_request_irq(irq_source);
-		printf("irq requested\n");
 	}
 	nb_cycles = m6809_execute(cycles);
 	machine_tick (nb_cycles);
+	machine_update();
 	return(nb_cycles);
 }
 

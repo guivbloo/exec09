@@ -1,6 +1,6 @@
 SRCS=m6809.c \
 	device_rom.c device_ram.c logging.c\
-	device_mc6850.c device_mc6840.c device.c debugger.c\
+	device_m6850.c device_m6840.c device.c debugger.c\
 	monitor.c  symtab.c  command.c simulator.c main.c\
 	bus_access.c machine.c machine_bloo.c \
 	io_com_udp.c io_file.c utils_time.c

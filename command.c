@@ -24,7 +24,7 @@
 #endif
 
 
-
+#define PROMPT "(dbg) "
 #define MAX_BREAKS 32
 #define MAX_DISPLAYS 32
 #define MAX_HISTORY 10
@@ -159,7 +159,6 @@ void print_device_name (unsigned int devno)
 void print_addr (absolute_address_t addr)
 {
    const char *name;
-
    print_device_name (addr >> 28);
    putchar (':');
    printf ("0x%04lX", addr & 0xFFFFFF);
@@ -1435,6 +1434,7 @@ static int print_insn_long (absolute_address_t addr)
    int size = dasm(buf, addr);
 
    const char* name;
+   printf(PROMPT);
    print_device_name(addr >> 28);
    putchar(':');
    printf("0x%04lX ", addr & 0xFFFFFF);
@@ -1461,7 +1461,7 @@ void print_current_insn (void)
    print_insn_long(to_absolute(m6809_get_pc()));
 }
 
-#define PROMPT "(dbg) "
+
 #define MAXLINE 256
 
 

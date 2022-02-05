@@ -4,7 +4,7 @@
 #include <string.h>
 #include "types.h"
 #include "device.h"
-#include "device_mc6840.h"
+#include "device_m6840.h"
 
 
 struct ptm_timer
@@ -223,11 +223,6 @@ static void m6840_soft_reset(struct m6840 *ptm)
     m6840_calc_irq(ptm);
 }
 
-void m6840_update (struct hw_device *dev)
-{
-
-}
-
 void m6840_dump(struct hw_device *dev)
 {
 	struct m6840 *ptm = (struct m6840 *)dev->priv;
@@ -317,7 +312,7 @@ struct hw_class m6840_class =
 	.reset = m6840_reset,
 	.read = m6840_read,
 	.write = m6840_write,
-	.update = m6840_update,
+	.update = NULL,
 	.tick = m6840_tick,
 	.dump = m6840_dump,
     .check_interrupt = m6840_irq_pending,

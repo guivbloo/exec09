@@ -183,8 +183,8 @@ int main (int argc, char *argv[])
 	
 	parse_args (argc, argv);
 	log_init(STDOUT, NULL);
-	log_message(DEBUG, "EXEC09 simulator starting");
 	sim_init();
 	sim_run();
+	sim_exit (0);
 	return (0);
 }

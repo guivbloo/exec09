@@ -7,8 +7,6 @@ ACIA_CFG	equ %10010101	; Receive Int enable, Transmit Int disable, 8bits + 1 sto
 ACIA_TDRE_MASK	equ %00000010	; Mask to test Transmit Data Register Full
 ACIA_RDRF_MASK	equ %00000001	; Mask to test Receive Data Register Full
 
-PTM_CTRL_REG	equ $C081
-PTM_CFG		equ %01000010	;16bits mode, E clock source, no reset
 RAMSTART	equ $1000
 		
 	org 0xFF00
@@ -22,8 +20,6 @@ main:
 	ldb #ACIA_CFG
 	stb ACIA_CFG_REG	;ACIA config via control register
 
-	ldb #PTM_CFG
-	stb PTM_CTRL_REG 
 	ldx #helloworld
 putsagain:
 	ldb ,x+

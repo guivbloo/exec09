@@ -1,5 +1,5 @@
-#ifndef M6809_DEVICE_H
-#define M6809_DEVICE_H
+#ifndef DEVICE_H
+#define DEVICE_H
 
 #include "types.h"
 
@@ -71,4 +71,4 @@ struct hw_device
 
 struct hw_device *device_create (struct hw_class *class_ptr, unsigned int size, void *priv);
 
-#endif /* _M6809_DEVICE_H */
+#endif /* DEVICE_H */
