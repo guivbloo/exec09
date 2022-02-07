@@ -232,12 +232,12 @@ void machine_describe (void)
 	unsigned int dot_dot = 0;
 
 	/* machine */
-	printf("Machine: %s\n", machine->name);
+	printf("(dbg) Machine: %s\n", machine->name);
 
 	/* devices */
 	for (devno = 0; devno < device_count; devno++)
 	{
-		printf("Device %2d: %s",devno, device_table[devno]->class_ptr->name);
+		printf("(dbg) Device %2d: %s",devno, device_table[devno]->class_ptr->name);
 		for (irqno =  0; irqno < irq_count; irqno++)
 		{
 			if (irq_map[irqno] == devno)
@@ -262,7 +262,7 @@ void machine_describe (void)
 			/* nothing interesting to report */
 			if (! dot_dot)
 			{
-				printf("..\n");
+				printf("(dbg) ..\n");
 				dot_dot = 1;
 			}
 		}
@@ -271,7 +271,7 @@ void machine_describe (void)
 			dot_dot = 0;
 			if(map->devid != INVALID_DEVID)
 			{
-				printf ("Map %3d:  addr=%04X  dev=%d  offset=%04lX  size=%04X  flags=%02X\n",
+				printf ("(dbg) Map %3d:  addr=%04X  dev=%d  offset=%04lX  size=%04X  flags=%02X\n",
 					mapno, mapno * BUS_MAP_SIZE, map->devid, map->offset,
 					device_table[map->devid]->size, map->flags);
 			}

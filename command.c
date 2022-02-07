@@ -1393,7 +1393,7 @@ void cmd_help (void)
    while (cn->prefix != NULL)
    {
       if (cn->help)
-         printf ("%s (%s) - %s\n",
+         printf ("(dbg) %s (%s) - %s\n",
                  cn->name, cn->prefix, cn->help);
       cn++;
    }
@@ -1831,7 +1831,6 @@ void command_init (void)
     * using a dollar-sign prefix (e.g. $pc).  The value of the
     * symbol is a pointer to a function (e.g. pc_virtual) which
     * computes the value dynamically. */
-   log_message(DEBUG,"Entering")
    sym_add (AUTO_SYMTAB_T, "pc", (unsigned long)pc_virtual, SYM_AUTO);
    sym_add (AUTO_SYMTAB_T, "x", (unsigned long)x_virtual, SYM_AUTO);
    sym_add (AUTO_SYMTAB_T, "y", (unsigned long)y_virtual, SYM_AUTO);

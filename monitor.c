@@ -1180,7 +1180,7 @@ int monitor_load_map_file (const char *name)
 		}
 	}
 
-	printf ("Reading symbols from '%s'...\n", map_filename);
+	printf ("(dbg) Reading symbols from '%s'...\n", map_filename);
 	for (;;)
 	{
 		fgets (buf, sizeof(buf)-1, fp);

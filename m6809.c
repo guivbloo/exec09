@@ -2942,13 +2942,13 @@ void m6809_print_regs (void)
    if (m6809_get_cc() & F_FLAG) flags[6] = 'F';
    if (m6809_get_cc() & E_FLAG) flags[7] = 'E';
 
-   printf (" X: 0x%04X  [X]: 0x%04X    Y: 0x%04X  [Y]: 0x%04X    ",
+   printf ("(dbg) X: 0x%04X  [X]: 0x%04X    Y: 0x%04X  [Y]: 0x%04X    ",
             m6809_get_x(), bus_read16(m6809_get_x()), m6809_get_y(), bus_read16(m6809_get_y()) );
    printf ("PC: 0x%04X [PC]: 0x%04X\n",
             m6809_get_pc(), bus_read16(m6809_get_pc()) );
-   printf (" U: 0x%04X  [U]: 0x%04X    S: 0x%04X  [S]: 0x%04X    ",
+   printf ("(dbg) U: 0x%04X  [U]: 0x%04X    S: 0x%04X  [S]: 0x%04X    ",
             m6809_get_u(), bus_read16(m6809_get_u()), m6809_get_s(), bus_read16(m6809_get_s()) );
    printf ("DP: 0x%02X\n", m6809_get_dp() );
-   printf (" A: 0x%02X      B: 0x%02X    [D]: 0x%04X   CC: %s\n",
+   printf ("(dbg) A: 0x%02X      B: 0x%02X    [D]: 0x%04X   CC: %s\n",
             m6809_get_a(), m6809_get_b(), bus_read16(m6809_get_d()), flags );
 }

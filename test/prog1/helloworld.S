@@ -1,3 +1,6 @@
+;helloworld.S
+;Minimum program to test ACIA m6850
+
 ACIA_CFG_REG	equ $C000
 ACIA_STATUS_REG	equ $C000
 ACIA_DATA_REG   equ $C001
@@ -27,6 +30,8 @@ putsagain:
 	bsr acia_putc
 	bra putsagain
 putsend:
+	ldb #$23
+	bsr acia_putc
 	bra .
 
 		

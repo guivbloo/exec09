@@ -226,9 +226,9 @@ static void m6840_soft_reset(struct m6840 *ptm)
 void m6840_dump(struct hw_device *dev)
 {
 	struct m6840 *ptm = (struct m6840 *)dev->priv;
-	printf("-- M6840 registers --\n");
-	printf("CR1: 0x%02X  CR2: 0x%02X  CR3: 0x%02X  SR: 0x%02X\n", ptm->timer[1].ctrl, ptm->timer[2].ctrl, ptm->timer[3].ctrl, ptm->sr);
-    printf("T1: 0x%04X  T2: 0x%04X  T3: 0x%04X\n", ptm->timer[1].timer, ptm->timer[2].timer, ptm->timer[3].timer);
+	printf("(dbg) -- M6840 registers --\n");
+	printf("(dbg) CR1: 0x%02X  CR2: 0x%02X  CR3: 0x%02X  SR: 0x%02X\n", ptm->timer[1].ctrl, ptm->timer[2].ctrl, ptm->timer[3].ctrl, ptm->sr);
+    printf("(dbg) T1: 0x%04X  T2: 0x%04X  T3: 0x%04X\n", ptm->timer[1].timer, ptm->timer[2].timer, ptm->timer[3].timer);
 }
 
 void m6840_reset (struct hw_device *dev)
@@ -289,7 +289,6 @@ void m6840_write (struct hw_device *dev, unsigned long addr, uint8_t val)
     if (addr == 1)
     {
         addr = 2;
-        printf("write\n");
     }
     else
     {

@@ -2,6 +2,7 @@ bash
 sudo apt-get update
 sudo apt-get -y install wget
 sudo apt-get -y install gcc
+sudo apt-get -y install srecord
 sudo apt-get -y install build-essential
 sudo apt-get -y install libgmp-dev libmpfr-dev libmpc-dev
 sudo apt-get -y install texinfo

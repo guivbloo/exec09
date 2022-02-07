@@ -45,7 +45,7 @@ void m6850_update (struct hw_device *dev)
   {
     /* A byte is pending to be received */
     port->status |= 0x01; /* RDRF = 1 */
-    port->RDR = buffer_put[index_put];
+    port->RDR = buffer_put[index_put-1];
     if(port->ctrl & 0x80 == 0x80) /* Receive Interrupt is enabled */
       port->status |= 0x80; /* IRQ  bit set*/
     index_put--;
@@ -122,9 +122,9 @@ void m6850_reset (struct hw_device *dev)
 void m6850_dump (struct hw_device *dev)
 {
   struct m6850_port *port = (struct m6850_port *)dev->priv;
-  printf("-- M6850 registers --\n");
-  printf("CR: 0x%02X  SR: 0x%02X\n", port->ctrl, port->status);
-  printf("RDR: 0x%02X  TDR: 0x%02X\n", port->RDR, port->TDR);
+  printf("(dbg) -- M6850 registers --\n");
+  printf("(dbg) CR: 0x%02X  SR: 0x%02X\n", port->ctrl, port->status);
+  printf("(dbg) RDR: 0x%02X  TDR: 0x%02X\n", port->RDR, port->TDR);
 }
 
 uint8_t m6850_irq_pending(struct hw_device *dev)
@@ -182,7 +182,7 @@ uint8_t m6850_kbhit()
 /* Return 0 if there is space left */
 uint8_t m6850_putready()
 {
-  if(index_put >= BUFFER_SIZE-1)
+  if(index_put > BUFFER_SIZE-1)
     return 1;
   else
     return 0;

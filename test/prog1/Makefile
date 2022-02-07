@@ -16,14 +16,13 @@ S19FLAGS		= -9 -l$@.lst --format=srec -s --map=$@.map
 all: helloworld ptm 
 
 helloworld: helloworld.S
-	$(AS) -o $@.hex $< $(HEXFLAGS)
 	$(AS) -o $@.s19 $< $(S19FLAGS)
-	objcopy -I ihex -O binary $@.hex $@.bin
+	$(AS) -o $@.hex $< $(HEXFLAGS)
+	srec_cat $@.hex -intel -offset - 0xE000 -o $@.bin -binary
 
 ptm: ptm.S
 	$(AS) -o $@.hex $< $(HEXFLAGS)
 	$(AS) -o $@.s19 $< $(S19FLAGS)
-	objcopy -I ihex -O binary $@.hex $@.bin
 
 clean:
 	rm -rf *.o *.lst *.map *.s19 *.hex *.bin

@@ -18,8 +18,8 @@
  *
  * 48KByte of RAM at $0000
  * 6850 at $C000, $C001
- * 6840 at $C080, ...
- * 12KByte of ROM at $D000
+ * 6840 at $C400, ...
+ * 8KByte of ROM at $E000
  ********************************************************************/
 
 
@@ -41,13 +41,13 @@
 	machine_attach_device(uart);
     machine_map_device (uart, 0, BLOO_UART_BASE, BLOO_UART_SIZE, MAP_READWRITE);
 
-	/* From $C080 to  $C08x for 6840 */
+	/* From $C400 to  $C4xx for 6840 */
 	ptm = m6840_create(BLOO_PTM_SIZE);
 	machine_attach_device(ptm);
     machine_map_device (ptm, 0, BLOO_PTM_BASE, BLOO_PTM_SIZE, MAP_READWRITE);
 	machine_attach_irq (ptm);
 	
-	/* 12K ROM from D000 to FFFF */
+	/* 8K ROM from E000 to FFFF */
     rom = rom_create (boot_rom_file, BLOO_ROM_SIZE);
 	machine_attach_device(rom);
     machine_map_device (rom , 0, BLOO_ROM_BASE, BLOO_ROM_SIZE, MAP_READWRITE);

@@ -10,7 +10,7 @@
 #include "debugger.h"
 #include "logging.h"
 #include "symtab.h"
-#include "device_m6850.h"
+#include "console.h"
 
 /* Nonzero if SWI2 should be reported with a postbyte */
 int os9call = 0;
@@ -125,6 +125,7 @@ void idle_loop (void)
 int sim_init()
 {
 	int rc;
+	console_init();
     init_time();
 	sym_init();
     if (binary)
@@ -148,17 +149,6 @@ int sim_init()
 	debugger_init ();
 }
 
-void sim_console()
-{
-	uint8_t val;
-	while(m6850_kbhit())
-	{
-		val = m6850_getchar();
-		printf("(csl) <- 0x%02X\n", val);
-	}
-
-}
-
 int sim_run()
 {
 	unsigned long nb_cycles = 0;
@@ -166,7 +156,7 @@ int sim_run()
 	{
 
 		nb_cycles += machine_run (cycles_per_tick);
-		sim_console();
+		console_run();
 		/* Align with real time*/
 		idle_loop ();
 
