@@ -82,8 +82,8 @@ void machine_periodic (void);
 void machine_tick (unsigned long nb_cycles);
 int machine_run (int cycles);
 void machine_reset (void);
-unsigned int machine_check_irq (void);
-unsigned int machine_check_firq (void);
+void machine_check_irq (void);
+void machine_check_firq (void);
 void machine_attach_irq (struct hw_device *dev);
 void machine_attach_firq (struct hw_device *dev);
 

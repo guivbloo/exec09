@@ -56,7 +56,7 @@ void m6850_update (struct hw_device *dev)
     buffer_get[index_get] = port->TDR;
     index_get++;
     port->status |= 0x02; /* TDRE = 1 */
-    if(port->ctrl & 0x10 == 0x10 && port->ctrl | 0x20 == 0x20) /* Transmit Interrupt is enabled */
+    if(((port->ctrl & 0x10) == 0x10) && ((port->ctrl | 0x20) == 0x20)) /* Transmit Interrupt is enabled */
       port->status |= 0x80; /* IRQ  bit set*/
   }
 }
@@ -104,7 +104,7 @@ void m6850_write (struct hw_device *dev, unsigned long addr, uint8_t val)
     {
       port->TDR = val;
       port->status &=~(0x02); /* Clear TDRE */
-      if(port->ctrl & 0x10 == 0x10 && port->ctrl | 0x20 == 0x20) /* Transmit Interrupt is enabled */
+      if(((port->ctrl & 0x10) == 0x10) && ((port->ctrl | 0x20) == 0x20)) /* Transmit Interrupt is enabled */
         port->status &=~(0x80); /* Clear IRQ */
       break;
     }

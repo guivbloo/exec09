@@ -38,7 +38,7 @@ void console_run()
                 {
                     if(m6850_putready() == 0)
                     {
-                        val = 0xAA;
+                        val = 0x3F;
                         console_putchar(val);
                     }
                 }
@@ -104,15 +104,22 @@ void console_init()
 {
     int i;
     in_file  = fopen("test/csw.bin", "r"); // read only 
-    fseek(in_file, 0, SEEK_END); // seek to end of file
-    size = ftell(in_file); // get current file pointer
-    fseek(in_file, 0, SEEK_SET); // seek back to beginning of file
-    for(i=0;i<size;i++)
+    if(in_file != NULL)
     {
-        checksum += fgetc(in_file);
+        fseek(in_file, 0, SEEK_END); // seek to end of file
+        size = ftell(in_file); // get current file pointer
+        fseek(in_file, 0, SEEK_SET); // seek back to beginning of file
+        for(i=0;i<size;i++)
+        {
+            checksum += fgetc(in_file);
+        }
+        fseek(in_file, 0, SEEK_SET); // seek back to beginning of file
+        printf("(csl) CSW loaded: %d bytes. CS: %02X\n", size, checksum);
     }
-    fseek(in_file, 0, SEEK_SET); // seek back to beginning of file
-    printf("(csl) CSW loaded: %d bytes. CS: %02X\n", size, checksum);
+    else
+    {
+        printf("(csl) no CSW available\n");
+    }
 }
 
 

@@ -163,9 +163,8 @@ void machine_dump(void)
 	}
 }
 
-unsigned int machine_check_irq(void)
+void machine_check_irq(void)
 {
-	uint8_t rc = 0;
 	int i;
 	unsigned int devid_value;
 	struct hw_device *dev;
@@ -178,16 +177,17 @@ unsigned int machine_check_irq(void)
 		devid_value = irq_map[i];
 		dev = device_table[devid_value];
 		if (dev->class_ptr->check_interrupt)
+		{
 			if(dev->class_ptr->check_interrupt (dev) > 0)
-				return devid_value;
+				m6809_request_irq(devid_value);
+			else
+				m6809_release_irq(devid_value);
+		}
 	}
-	return 0;
-
 }
 
-unsigned int machine_check_firq(void)
+void machine_check_firq(void)
 {
-	uint8_t rc = 0;
 	int i;
 	unsigned int devid_value;
 	struct hw_device *dev;
@@ -200,11 +200,13 @@ unsigned int machine_check_firq(void)
 		devid_value = firq_map[i];
 		dev = device_table[devid_value];
 		if (dev->class_ptr->check_interrupt)
+		{
 			if(dev->class_ptr->check_interrupt (dev) > 0)
-				return devid_value;
+				m6809_request_firq(devid_value);
+			else
+				m6809_release_firq(devid_value);
+		}
 	}
-	return 0;
-
 }
 
 void machine_reset (void)
@@ -299,13 +301,9 @@ void machine_fault (unsigned int addr, unsigned char type)
 
 int machine_run (int cycles)
 {
-	unsigned int irq_source;
 	unsigned long nb_cycles;
-	irq_source = machine_check_irq();
-	if(irq_source > 0)
-	{
-		m6809_request_irq(irq_source);
-	}
+	machine_check_irq();
+	machine_check_firq();
 	nb_cycles = m6809_execute(cycles);
 	machine_tick (nb_cycles);
 	machine_update();

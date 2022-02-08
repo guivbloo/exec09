@@ -1,3 +1,8 @@
+; ptm.S
+; This program configures a timer of 1 second and sends '#'' 
+; on the ACIA every second
+; Usage of interrupt and stack
+
 PTM_CTRL_REG1	equ $C080
 PTM_CTRL_REG2	equ $C081
 PTM_CTRL_REG3	equ $C080

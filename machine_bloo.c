@@ -40,6 +40,7 @@
 	uart = m6850_create(BLOO_UART_SIZE);
 	machine_attach_device(uart);
     machine_map_device (uart, 0, BLOO_UART_BASE, BLOO_UART_SIZE, MAP_READWRITE);
+	machine_attach_irq (uart);
 
 	/* From $C400 to  $C4xx for 6840 */
 	ptm = m6840_create(BLOO_PTM_SIZE);
