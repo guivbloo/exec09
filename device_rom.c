@@ -1,6 +1,7 @@
  #include <stdlib.h>
  #include <stdio.h>
  #include <string.h>
+ #include <stdint.h>
  #include "types.h"
  #include "device.h"
  #include "device_rom.h"
@@ -18,6 +19,24 @@ void rom_write (struct hw_device *dev, unsigned long addr, uint8_t val)
 	buf[addr] = val;
 }
 
+void rom_dump (struct hw_device *dev)
+{
+	FILE *in_file;
+	int i;
+	char *buf = dev->priv;
+	in_file  = fopen("rom.bin", "w"); 
+    if(in_file != NULL)
+	{
+		printf("(dbg) -- ROM --\n");
+		printf("(dbg) rom.bin file exported\n");
+		for(i=0;i<dev->size;i++)
+		{
+			fputc(buf[i],in_file);
+		}
+		fclose(in_file);
+	}
+}
+
 void rom_reset (struct hw_device *dev)
 {
 	(void) dev;	// silence warning unused parameter
@@ -30,7 +49,7 @@ struct hw_class rom_class =
 	.reset = rom_reset,
 	.read = rom_read,
 	.write = rom_write,
-	.dump = NULL,
+	.dump = rom_dump,
 	.check_interrupt = NULL,
 };
 

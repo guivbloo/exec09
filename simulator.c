@@ -10,7 +10,6 @@
 #include "debugger.h"
 #include "logging.h"
 #include "symtab.h"
-#include "console.h"
 
 /* Nonzero if SWI2 should be reported with a postbyte */
 int os9call = 0;
@@ -22,7 +21,7 @@ unsigned int sim_freq = 4;
    triggered periodically, every so many cycles. Typically this is
    used by the machine to generate a timer interrupt.
 */
-unsigned int cycles_per_tick = 10;
+unsigned int cycles_per_tick = 1;
 
 /* Nonzero if debugging support is turned on */
 BOOLEAN debug_enabled = FALSE;
@@ -125,7 +124,6 @@ void idle_loop (void)
 int sim_init()
 {
 	int rc;
-	console_init();
     init_time();
 	sym_init();
     if (binary)
@@ -156,7 +154,6 @@ int sim_run()
 	{
 
 		nb_cycles += machine_run (cycles_per_tick);
-		console_run();
 		/* Align with real time*/
 		idle_loop ();
 

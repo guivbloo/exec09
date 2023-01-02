@@ -179,7 +179,9 @@ void machine_check_irq(void)
 		if (dev->class_ptr->check_interrupt)
 		{
 			if(dev->class_ptr->check_interrupt (dev) > 0)
+			{
 				m6809_request_irq(devid_value);
+			}
 			else
 				m6809_release_irq(devid_value);
 		}

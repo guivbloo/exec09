@@ -103,7 +103,7 @@ void console_run()
 void console_init()
 {
     int i;
-    in_file  = fopen("test/csw.bin", "r"); // read only 
+    in_file  = fopen("test/csw/csw.bin", "r"); // read only 
     if(in_file != NULL)
     {
         fseek(in_file, 0, SEEK_END); // seek to end of file

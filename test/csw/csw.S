@@ -29,65 +29,12 @@ temp2		rmb 1
 
 
 		org 0xE000
-csw_entry:	
-		bra .
-
-		org 0xFE00
-main:		orcc #$FF       	; Disable interrupts.
+csw_entry: 	orcc #$FF       	; Disable interrupts.
 		clra		
 		tfr a,dp        	; Set direct page register to 0.
 		lds #stackstart   	; Initialize HwStack
 		jsr uart_init
 		ldx #welcome
-		jsr uart_puts
-		ldb #$11	 	; Sends 0x11
-go6:		jsr uart_putc	
-		beq go6
-		jsr uart_kbhit
-		beq endflash
-		jsr uart_getc
-		cmpb #$11		; did we receive 0x11 ?
-		bne endflash
-go3:		jsr uart_kbhit
-		beq go3
-		jsr uart_getc
-		exg A,B
-go4:		jsr uart_kbhit
-		beq go4
-		jsr uart_getc
-		addd #csw_start
-		std temp
-go5:		jsr uart_kbhit
-		beq go5
-		jsr uart_getc	
-		stb temp2	
-		clra
-nextblock:	ldx #csw_start		; init x to point on RAM
-go1:		jsr uart_kbhit		; transfert CSW
-		beq go1
-		jsr uart_getc
-		stb ,x+
-		pshs b
-		adda ,s+
-		cmpx temp
-		bne go1
-
-		cmpa temp2		; check integrity
-		bne endflash
-
-		ldu #rom_start		; init u to point on ROM
-		ldx #csw_start		; 
-go2:		lda ,x+			; get the byte from ram
-		sta ,u+			; and write it into the rom
-		cmpx temp		; 
-		bne go2			; 
-
-		ldb #K_AND 		; Sends '&'
-		jsr uart_putc
-		ldx #ok			;Flash done
-		jsr uart_puts
-		jmp csw_entry
-endflash:	ldx #ko			;Flash ko
 		jsr uart_puts
 		bra .
 
@@ -137,12 +84,7 @@ uart_getc:
 		rts
 
 ;************ Strings ************
-welcome:        fcc '6809 RSW v0.1-alpha1'
-		fcb $0D,$0A,$00
-ok:		fcc 'Update OK'
-		fcb $0D,$0A,$00
-
-ko:		fcc 'Update KO'
+welcome:        fcc '6809 CSW'
 		fcb $0D,$0A,$00
 
 ;************ Interrupt handlers ************
@@ -155,18 +97,3 @@ NMI_HANDLER:	jmp	[NMIVEC]
 			
 ;************ Interrupt vectors **********
 		org 0xFFF0
-		fdb	0x0000			;reserved
-		org 0xFFF2
-		fdb	SWI3_HANDLER
-		org 0xFFF4
-		fdb	SWI2_HANDLER
-		org 0xFFF6
-		fdb	FIRQ_HANDLER
-		org 0xFFF8
-		fdb	IRQ_HANDLER
-		org 0xFFFA
-		fdb	SWI_HANDLER
-		org 0xFFFC
-		fdb	NMI_HANDLER
-		org 0xFFFE
-RESET:		fdb	main

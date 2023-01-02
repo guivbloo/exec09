@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
- 
- 
+#include <stdio.h>
+#include <stdint.h>
 #include "types.h"
 #include "device.h"
 #include "device_ram.h"
@@ -24,6 +24,24 @@ void ram_write (struct hw_device *dev, unsigned long addr, uint8_t val)
 	buf[addr] = val;
 }
 
+void ram_dump (struct hw_device *dev)
+{
+	FILE *in_file;
+	int i;
+	char *buf = dev->priv;
+	in_file  = fopen("ram.bin", "w"); 
+    if(in_file != NULL)
+	{
+		printf("(dbg) -- RAM --\n");
+		printf("(dbg) ram.bin file exported\n");
+		for(i=0;i<dev->size;i++)
+		{
+			fputc(buf[i],in_file);
+		}
+		fclose(in_file);
+	}
+}
+
 struct hw_class ram_class =
 {
 	.name = "RAM",
@@ -31,7 +49,7 @@ struct hw_class ram_class =
 	.reset = ram_reset,
 	.read = ram_read,
 	.write = ram_write,
-	.dump = NULL,
+	.dump = ram_dump,
 	.check_interrupt = NULL,
 };
 

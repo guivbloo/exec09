@@ -10,6 +10,7 @@
 #include "types.h"
 #include "device.h"
 #include "device_m6850.h"
+#include "io_com_udp.h"
 
 #define BUFFER_SIZE 1
 
@@ -26,6 +27,12 @@ uint8_t buffer_get[BUFFER_SIZE];
 uint8_t index_put = 0;
 uint8_t index_get = 0;
 
+int socket_rx, socket_tx;
+
+#define RX_LOCAL_PORT 4000
+#define TX_LOCAL_PORT 4001
+#define TX_DST_PORT 5000
+
 
 #define TRANSMIT_DATA_REGISTER 1    
 #define RECEIVE_DATA_REGISTER 1
@@ -38,8 +45,12 @@ uint8_t index_get = 0;
 #define SER_STAT_WRITEOK 0x2
 #define SER_STAT_TXEMPTY 0x2
 
+void m6850_update_com();
+void m6850_init_com();
+
 void m6850_update (struct hw_device *dev)
 {
+  m6850_update_com();
   struct m6850_port *port = (struct m6850_port *)dev->priv;
   if(((port->status & 0x01) == 0x00) && (index_put > 0))
   {
@@ -149,6 +160,7 @@ struct hw_class m6850_class =
 struct hw_device* m6850_create (unsigned long size)
 {
   struct m6850_port *port = malloc (sizeof (struct m6850_port));
+  m6850_init_com();
   return device_create (&m6850_class, size, port);
 }
 
@@ -186,5 +198,28 @@ uint8_t m6850_putready()
     return 1;
   else
     return 0;
+}
+
+void m6850_init_com()
+{
+  socket_rx = udp_com_socket_create (RX_LOCAL_PORT);
+  socket_tx = udp_com_socket_create (TX_LOCAL_PORT);
+}
+
+void m6850_update_com()
+{
+  int rc;
+  uint8_t val;
+  if(m6850_kbhit())
+  {
+    val = m6850_getchar();
+    udp_com_socket_send (socket_tx, TX_DST_PORT, &val, sizeof (val));
+  }
+  if(m6850_putready() == 0)
+  {
+    rc = udp_com_socket_receive (socket_rx, 0, &val, sizeof (val));
+    if(rc == 1)
+        m6850_putchar(val);
+  }
 }
 

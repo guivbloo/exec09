@@ -279,7 +279,7 @@ void m6840_write (struct hw_device *dev, unsigned long addr, uint8_t val)
             {
                 p->timer = p->wlatch;
                 p->output = 0;
-                ptm->sr &= ~(1 << addr);
+                ptm->sr &= ~(1 << addr-1);
                 m6840_calc_irq(ptm);
                 m6840_calc_outputs(ptm);
             }

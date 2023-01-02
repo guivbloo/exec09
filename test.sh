@@ -1,4 +1,4 @@
-bash
+#!/bin/bash
 sudo apt-get update
 sudo apt-get -y install wget
 sudo apt-get -y install gcc
@@ -9,6 +9,7 @@ sudo apt-get -y install texinfo
 sudo apt-get -y install libncurses5-dev
 sudo apt-get -y install flex
 sudo apt-get -y install bison
+sudo apt-get -y install lxterminal
 cd /tmp
 wget http://www.lwtools.ca/releases/lwtools/lwtools-4.18.tar.gz
 tar xvf lwtools-4.18.tar.gz

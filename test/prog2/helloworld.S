@@ -9,7 +9,7 @@ ACIA_DATA_REG   equ $C001
 
 ACIA_RESET	equ %00000011	; CR0 = 1 and CR1 = 1
 ACIA_CFG	equ %10010101	; Receive Int enable, Transmit Int disable, 8bits + 1 stop, clock/4/16=115200
-ACIA_TDRE_MASK	equ %00000010	; Mask to test Transmit Data Register Full
+ACIA_TDRE_MASK	equ %00000010	; Mask to test Transmit Data Register Empty
 ACIA_RDRF_MASK	equ %00000001	; Mask to test Receive Data Register Full
 
 RAMSTART	equ $1000

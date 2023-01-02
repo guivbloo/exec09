@@ -11,9 +11,9 @@
 #include <arpa/inet.h>
 
 
-#define UART_SRC_CLIENT_PORT 8001
-#define UART_DST_SERVER_PORT 9000
-#define UART_SRC_SERVER_PORT 7401
+#define UART_RX_LOCAL_PORT 5000
+#define UART_TX_DST_PORT 4000
+#define UART_TX_LOCAL_PORT 4002
 
 void udp_socket_error (void)
 {
@@ -118,7 +118,7 @@ int kbchar(void)
 
 int main (int argc, char *argv[])
 {
-	int server, client;
+	int rx_sock, tx_sock;
 	char csw_file[8192];
 	size_t len;
 	char sendbuf[] = { 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -128,8 +128,8 @@ int main (int argc, char *argv[])
 	char array[2];
 	int i;
 	int update_in_progress = 0;
-	server = udp_socket_create (UART_SRC_SERVER_PORT);
-	client = udp_socket_create (UART_SRC_CLIENT_PORT);
+	rx_sock = udp_socket_create (UART_RX_LOCAL_PORT);
+	tx_sock = udp_socket_create (UART_TX_LOCAL_PORT);
 	printf ("CSW Loader 1.0.0\n");
 	fp = fopen(argv[1], "rb");
 	if(fp != NULL)
@@ -156,17 +156,17 @@ int main (int argc, char *argv[])
 		}
 		*/
 		
-		if(udp_socket_receive (server, 0, recvbuf, sizeof (recvbuf)) > 0)
+		if(udp_socket_receive (rx_sock, 0, recvbuf, sizeof (recvbuf)) > 0)
 		{
 			printf("%c", recvbuf[0]);
 			fflush(stdout);
 			if(recvbuf[0] == '?' && len != 0)
 			{
 				array[0]='!';
-				udp_socket_send (client, UART_DST_SERVER_PORT, &array[0], sizeof (char));
+				udp_socket_send (tx_sock, UART_TX_DST_PORT, &array[0], sizeof (char));
 				for(i=0;i<64;i++)
 				{
-					udp_socket_send (client, UART_DST_SERVER_PORT, &csw_file[i], sizeof (char));
+					udp_socket_send (tx_sock, UART_TX_DST_PORT, &csw_file[i], sizeof (char));
 				}
 				update_in_progress++;
 			}
@@ -174,7 +174,7 @@ int main (int argc, char *argv[])
 			{
 				for(i=64*update_in_progress;i<64*(update_in_progress+1);i++)
 				{
-					udp_socket_send (client, UART_DST_SERVER_PORT, &csw_file[i], sizeof (char));
+					udp_socket_send (tx_sock, UART_TX_DST_PORT, &csw_file[i], sizeof (char));
 				}
 				update_in_progress++;
 				if(update_in_progress == 64)
@@ -184,6 +184,6 @@ int main (int argc, char *argv[])
 			}
 		}
 	}
-	udp_socket_close(server);
-	udp_socket_close(client);
+	udp_socket_close(tx_sock);
+	udp_socket_close(rx_sock);
 }
