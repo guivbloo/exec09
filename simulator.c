@@ -86,14 +86,15 @@ void idle_loop (void)
 	static int total_ms_elapsed = 0;
 	static int cumulative_delay = 0;
 
-	if (--count > 0)
-		return;
 
+	// First time executing this function
 	if (last.tv_sec == 0 && last.tv_usec == 0)
 		gettimeofday (&last, NULL);
 
 	gettimeofday (&now, NULL);
 	real_ms = time_diff (&last, &now);
+		printf("real_ms:%d\n",real_ms);
+
 	last = now;
 
 	cycles = machine_get_cycles ();
@@ -117,8 +118,6 @@ void idle_loop (void)
 		usleep (50 * 1000UL);
 		cumulative_delay -= 50;
 	}
-
-	count = period;
 }
 
 int sim_init()
