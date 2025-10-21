@@ -41,8 +41,7 @@ struct function_call {
 //void add_named_symbol (const char *id, target_addr_t value, const char *filename);
 struct x_symbol * find_symbol (target_addr_t value);
 //void monitor_branch (void);
-void monitor_call (unsigned int flags);
-void monitor_return (void);
+
 /* --- Functions for monitor manipulation --- */
 void monitor_init (void); 
 int check_break (void);

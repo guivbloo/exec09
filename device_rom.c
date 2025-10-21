@@ -53,35 +53,14 @@ struct hw_class rom_class =
 	.check_interrupt = NULL,
 };
 
-struct hw_device *rom_create (const char *filename, unsigned int maxsize)
+struct hw_device *rom_create (unsigned int maxsize)
 {
 	FILE *fp;
 	struct hw_device *dev;
 	unsigned int image_size;
 	char *buf;
-
-	if (filename)
-	{
-		fp = file_open (NULL, filename, "rb");
-		if (!fp)
-			return NULL;
-		image_size = sizeof_file (fp);
-	}
-
 	buf = malloc (maxsize);
 	dev = device_create (&rom_class, maxsize, buf);
-	if (filename)
-	{
-		fread (buf, image_size, 1, fp);
-		fclose (fp);
-		maxsize -= image_size;
-		while (maxsize > 0)
-		{
-			memcpy (buf + image_size, buf, image_size);
-			buf += image_size;
-			maxsize -= image_size;
-		}
-	}
 
 	return dev;
 }

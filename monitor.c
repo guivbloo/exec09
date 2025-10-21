@@ -11,7 +11,7 @@
 #include "command.h"
 #include "bus_access.h"
 #include "os9syscalls.h"
-#include "machine.h"
+//#include "machine.h"
 #include "logging.h"
 
 #define S_NAMED 0x1
@@ -972,7 +972,7 @@ int dasm (char *buf, absolute_address_t opc)
     }
 
   op_str = mne[op];
-  if ((!strcmp("SWI2", op_str)) && sim_get_os9call())
+  if ((!strcmp("SWI2", op_str)))
     {
       op = bus_read8_abs (pc++);
       if(op < 0x91)
@@ -1369,46 +1369,6 @@ int monitor_load_image (const char *name)
     }
 }
 
-void monitor_call (unsigned int flags)
-{
-   (void) flags; // FIXME: this variable is never used
-#ifdef CALL_STACK
-	if (current_function_call <= &fctab[MAX_FUNCTION_CALLS-1])
-	{
-		current_function_call++;
-		current_function_call->entry_point = m6809_get_pc ();
-		current_function_call->flags = flags;
-	}
-#endif
-#if 0
-	const char *id = sym_lookup (&program_symtab, to_absolute (m6809_get_pc ()));
-	if (id)
-	{
-		// printf ("In %s now\n", id);
-	}
-#endif
-}
-
-void monitor_return (void)
-{
-#ifdef CALL_STACK
-	if (current_function_call > &fctab[MAX_FUNCTION_CALLS-1])
-	{
-		current_function_call--;
-		return;
-	}
-
-	while ((current_function_call->flags & FC_TAIL_CALL) &&
-		(current_function_call > fctab))
-	{
-		current_function_call--;
-	}
-
-	if (current_function_call > fctab)
-		current_function_call--;
-#endif
-}
-
 const char* monitor_addr_name (target_addr_t target_addr)
 {
    static char buf[256], *bufptr;
@@ -1441,7 +1401,8 @@ void monitor_init (void)
 	current_function_call = &fctab[0];
 	auto_break_insn_count = 0;
 	signal (SIGINT, monitor_signal);
-	bool = sim_get_debug_status();
+	//bool = sim_get_debug_status();
+  bool= 0;
 	monitor_set_debug(bool);
 }
 
@@ -1465,12 +1426,50 @@ void monitor_backtrace (void)
 	}
 }
 
+void command_insn_hook (void)
+{
+   target_addr_t pc;
+   absolute_address_t abspc;
+   breakpoint_t *br;
+
+   pc = m6809_get_pc ();
+   command_trace_insn (pc);
+
+   if (active_break_count == 0)
+      return;
+
+   abspc = to_absolute (pc);
+   br = brkfind_by_addr (abspc);
+   if (br && br->enabled && br->on_execute)
+   {
+      breakpoint_hit (br);
+      if (monitor_get_debug_status() == 0)
+         return;
+      if (br->temp)
+         brkfree (br);
+      else
+         printf ("Breakpoint %d reached.\n", br->id);
+   }
+}
+
 
 /*
 Monitor entry point
 */
-int monitor6809 (void)
+int monitor_run (int cycles)
 {
+  do
+  {
+    command_insn_hook ();
+    if (check_break () != 0)
+			monitor_set_debug(TRUE);
+		if (monitor_get_debug_status() != FALSE)
+			if (monitor6809 () != 0)
+				goto cpu_exit;
+    m6809_execute(1);
+  } while (condition);
+  
+
 	int rc;
 	rc = 0;
 	signal (SIGINT, monitor_signal);

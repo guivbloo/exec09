@@ -5,6 +5,7 @@
 #include "machine.h"
 #include "device.h"
 #include "m6809.h"
+#include "bus_access.h"
 
 
 
@@ -361,7 +362,180 @@ int machine_match (const char *machine_name, machine_t *m)
 	return 0;
 }
 
-void machine_init (const char *machine_name, const char *boot_rom_file)
+int machine_load_hex (FILE *fp)
+{
+  unsigned int count, addr, type, data, checksum;
+  int done = 1;
+  int line = 0;
+
+  while (done != 0)
+    {
+      line++;
+
+      if (fscanf (fp, ":%2x%4x%2x", &count, &addr, &type) != 3)
+	{
+	  printf ("line %d: invalid hex record information.\n", line);
+	  break;
+	}
+      checksum = count + (addr >> 8) + (addr & 0xff) + type;
+
+      switch (type)
+	{
+	case 0:
+	  for (; count != 0; count--, addr++, checksum += data)
+	    {
+              if (fscanf(fp, "%2x", &data))
+                {
+		   bus_write8(addr, (UINT8) data);
+                }
+              else
+                {
+                  printf("line %d: hex record data inconsistent with count field.\n", line);
+	          break;
+                }
+	    }
+
+	  checksum = (-checksum) & 0xff;
+
+          if ( (fscanf(fp, "%2x", &data) != 1) || (data != checksum) )
+	    {
+	      printf("line %d: hex record checksum missing or invalid.\n", line);
+	      done = 0;
+	      break;
+	    }
+          fscanf(fp, "%*[\r\n]"); /* skip any form of line ending */
+	  break;
+
+	case 1:
+	  checksum = (-checksum) & 0xff;
+
+          if ( (fscanf(fp, "%2x", &data) != 1) || (data != checksum) )
+	    printf("line %d: hex record checksum missing or invalid.\n", line);
+	  done = 0;
+	  break;
+
+	case 2:
+	default:
+	  printf("line %d: not supported hex type %d.\n", line, type);
+	  done = 0;
+	  break;
+	}
+    }
+
+  (void) fclose (fp);
+  return 0;
+}
+
+int machine_load_bin(FILE *fp)
+{
+    unsigned int addr = 0;
+    int byte;
+    while ((byte = fgetc(fp)) != EOF)
+    {
+        bus_write8(addr++, (UINT8)byte);
+    }
+    fclose(fp);
+    return 0;
+}
+
+
+int machine_load_s19(FILE *fp)
+{
+  unsigned int count, addr, type, data, checksum;
+  int done = 1;
+  int line = 0;
+
+  while (done != 0)
+    {
+      line++;
+
+      if (fscanf(fp, "S%1x%2x%4x", &type, &count, &addr) != 3)
+	{
+	  printf("line %d: invalid S record information.\n", line);
+	  break;
+	}
+
+      checksum = count + (addr >> 8) + (addr & 0xff);
+
+      switch (type)
+	{
+	case 0:
+	case 1:
+	case 5:
+	  for (count -= 3; count != 0; count--, addr++, checksum += data)
+	    {
+               if (fscanf (fp, "%2x", &data))
+                  {
+							if(type == 1)
+								bus_write8 (addr, (UINT8) data);
+                  }
+               else
+                  {
+                    printf ("line %d: S record data inconsistent with count field.\n", line);
+	            break;
+                  }
+	    }
+
+	  checksum = (~checksum) & 0xff;
+
+	  if ( (fscanf (fp, "%2x", &data) != 1) || (data != checksum) )
+	    {
+	      printf ("line %d: S record checksum missing or invalid.\n", line);
+	      done = 0;
+	      break;
+	    }
+          fscanf (fp, "%*[\r\n]"); /* skip any form of line ending */
+	  break;
+
+	case 9:
+	  checksum = (~checksum) & 0xff;
+	  if ( (fscanf (fp, "%2x", &data) != 1) || (data != checksum) )
+	    printf ("line %d: S record checksum missing or invalid.\n", line);
+	  done = 0;
+	  break;
+
+	default:
+	  printf ("line %d: S%d not supported.\n", line, type);
+	  done = 0;
+	  break;
+	}
+    }
+
+  (void) fclose(fp);
+  return 0;
+}
+
+int machine_load_image(const char *name)
+{
+	unsigned int count, addr, type;
+	FILE *fp;
+
+	fp = fopen(name, "r");
+	if (fp == NULL)
+    {
+    	printf("failed to open image file %s.\n", name);
+    	return 1;
+    }
+
+  if (fscanf (fp, "S%1x%2x%4x", &type, &count, &addr) == 3)
+    {
+        rewind(fp);
+        return machine_load_s19(fp);
+    }
+  else if (fscanf (fp, ":%2x%4x%2x", &count, &addr, &type) == 3)
+    {
+        rewind(fp);
+        return machine_load_hex(fp);
+    }
+  else
+    {
+      	rewind(fp);
+        return machine_load_bin(fp);
+    }
+
+}
+
+void machine_init (const char *machine_name)
 {
 	//extern struct machine simple_machine;
 	extern machine_t bloo_machine;
@@ -391,7 +565,7 @@ void machine_init (const char *machine_name, const char *boot_rom_file)
 	if (machine_match (machine_name, &bloo_machine))
 	{
 		machine = &bloo_machine;
-		machine->init (boot_rom_file);
+		machine->init();
 	}	
 	//else if machine_match (machine_name, boot_rom_file, &simple_machine));
 	//else if (machine_match (machine_name, boot_rom_file, &eon2_machine));

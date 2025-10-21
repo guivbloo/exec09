@@ -55,7 +55,9 @@ void bus_write8 (unsigned int addr, uint8_t val)
         //fprintf(log_file,"wr 0x%04x<-0x%02x\n", addr, val);
 	struct bus_map *map = machine_find_map (addr);
 	struct hw_device *dev = machine_find_device (addr, map->devid);
+
 	struct hw_class *class_ptr = dev->class_ptr;
+
 	unsigned long phy_addr = map->offset + addr % BUS_MAP_SIZE;
 
         /* Unlike the read case, where we still return data on

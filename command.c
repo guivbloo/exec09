@@ -1647,31 +1647,7 @@ void command_trace_insn (target_addr_t addr)
 }
 
 
-void command_insn_hook (void)
-{
-   target_addr_t pc;
-   absolute_address_t abspc;
-   breakpoint_t *br;
 
-   pc = m6809_get_pc ();
-   command_trace_insn (pc);
-
-   if (active_break_count == 0)
-      return;
-
-   abspc = to_absolute (pc);
-   br = brkfind_by_addr (abspc);
-   if (br && br->enabled && br->on_execute)
-   {
-      breakpoint_hit (br);
-      if (monitor_get_debug_status() == 0)
-         return;
-      if (br->temp)
-         brkfree (br);
-      else
-         printf ("Breakpoint %d reached.\n", br->id);
-   }
-}
 
 void command_read_hook (absolute_address_t addr)
 {

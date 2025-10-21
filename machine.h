@@ -60,7 +60,7 @@ needed in some *hardcoded* mapping cases. */
 typedef struct 
 {
 	const char *name;
-	void (*init) (const char *boot_rom_file);
+	void (*init) (void);
 	void (*fault) (unsigned int addr, unsigned char type);
 	void (*dump_thread) (unsigned int thread_id);
 	void (*periodic) (void);
@@ -72,7 +72,7 @@ typedef struct
 	unsigned long cycles_per_sec;
 } machine_t;
 
-void machine_init (const char *machine_name, const char *boot_rom_file);
+void machine_init (const char *machine_name);
 void machine_fault (unsigned int addr, unsigned char type);
 void machine_dump(void);
 int machine_dump_thread(void);
@@ -86,7 +86,7 @@ void machine_check_irq (void);
 void machine_check_firq (void);
 void machine_attach_irq (struct hw_device *dev);
 void machine_attach_firq (struct hw_device *dev);
-
+int machine_load_image(const char *name);
 unsigned long machine_get_cycles (void);
 struct bus_map *machine_find_map (unsigned int addr);
 struct hw_device *machine_find_device (unsigned int addr, unsigned char id);

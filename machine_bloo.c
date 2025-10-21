@@ -24,7 +24,7 @@
 
 
  
- void bloo_init (const char *boot_rom_file)
+ void bloo_init ()
 {
    	struct hw_device *uart;
 	struct hw_device *ptm;
@@ -49,7 +49,7 @@
 	machine_attach_irq (ptm);
 	
 	/* 8K ROM from E000 to FFFF */
-    rom = rom_create (boot_rom_file, BLOO_ROM_SIZE);
+    rom = rom_create (BLOO_ROM_SIZE);
 	machine_attach_device(rom);
     machine_map_device (rom , 0, BLOO_ROM_BASE, BLOO_ROM_SIZE, MAP_READWRITE);
 }

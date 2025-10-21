@@ -6,8 +6,6 @@
 #include "utils_time.h"
 #include "m6809.h"
 #include "bus_access.h"
-#include "monitor.h"
-#include "command.h"
 #include "logging.h"
 
 
@@ -140,26 +138,7 @@ unsigned long m6809_get_cycles (void)
 
 static inline void change_pc (unsigned newPC)
 {
-#if 0
-  /* TODO - will let some RAM execute for trampolines */
-  if ((newPC < 0x1C00) || (newPC > 0xFFFF))
-  {
-	  fprintf (stderr, "m6809-run: invalid PC = %04X, previous was %s\n",
-	  	newPC, monitor_addr_name (PC));
-	  keybuffering (1);
-	  exit (2);
-  }
-
-  if (trace_enabled)
-  {
-		fprintf (stderr, "PC : %s ", monitor_addr_name (PC));
-		fprintf (stderr, "-> %s\n", monitor_addr_name (newPC));
-	}
-#endif
-  PC = newPC & 0xffff; /* [NAC HACK 2016Oct21] stop PC from going out of range. Crude.
-                          why have I not seen this problem before? Did I introduce this
-                          bug as a side-effect of another change?
-                       */
+  PC = newPC & 0xffff;
 }
 
 static inline unsigned imm_byte (void)
@@ -1185,7 +1164,6 @@ static void puls (void)
     }
   if (post & 0x80)
     {
-      monitor_return ();
       cpu_clk -= 2;
       PC = read_stack16 (S);
 		check_pc ();
@@ -1243,7 +1221,6 @@ static void pulu (void)
     }
   if (post & 0x80)
     {
-      monitor_return ();
       cpu_clk -= 2;
       PC = read_stack16 (U);
 		check_pc ();
@@ -1293,14 +1270,11 @@ static void jsr (void)
   S = (S - 2) & 0xffff;
   write_stack16 (S, PC & 0xffff);
   change_pc (ea);
-  monitor_call (0);
 }
 
 static void rti (void)
 {
-  monitor_return ();
   cpu_clk -= 6;
-  command_exit_irq_hook (m6809_get_cycles () - irq_start_time);
   m6809_set_cc (read_stack (S));
   S = (S + 1) & 0xffff;
 
@@ -1327,7 +1301,6 @@ static void rti (void)
 
 static void rts (void)
 {
-  monitor_return ();
   cpu_clk -= 5;
   PC = read_stack16 (S);
   check_pc ();
@@ -1527,7 +1500,6 @@ static void long_bsr (void)
   write_stack16 (S, PC & 0xffff);
   cpu_clk -= 9;
   change_pc (ea);
-  monitor_call (0);
 }
 
 static void bsr (void)
@@ -1538,7 +1510,6 @@ static void bsr (void)
   write_stack16 (S, PC & 0xffff);
   cpu_clk -= 7;
   change_pc (ea);
-  monitor_call (0);
 }
 
 /* Execute 6809 code for a certain number of cycles. */
@@ -1548,13 +1519,6 @@ int m6809_execute (int cycles)
 	cpu_period = cpu_clk = cycles;
 	do
 	{
-	 	command_insn_hook ();
-		if (check_break () != 0)
-			monitor_set_debug(TRUE);
-		if (monitor_get_debug_status() != FALSE)
-			if (monitor6809 () != 0)
-				goto cpu_exit;
-
 	  iPC = PC;
       opcode = imm_byte ();
 
@@ -1629,7 +1593,6 @@ int m6809_execute (int cycles)
 	  cpu_clk -= 3;
 	  PC = ea;
      check_pc ();
-	  monitor_call (FC_TAIL_CALL);
 	  break;		/* JMP direct */
 	case 0x0f:
 	  direct ();
@@ -1900,7 +1863,6 @@ int m6809_execute (int cycles)
 		st16 (S);
 		break;
 	      default:
-	        //sim_error ("invalid opcode (1) at %s\n", monitor_addr_name (iPC));
 		break;
 	      }
 	  }
@@ -1975,7 +1937,6 @@ int m6809_execute (int cycles)
 		cpu_clk--;
 		break;
 	      default:
-	        //sim_error ("invalid opcode (2) at %s\n", monitor_addr_name (iPC));
 		break;
 	      }
 	  }
@@ -2241,7 +2202,6 @@ int m6809_execute (int cycles)
 	  cpu_clk += 1;
 	  PC = ea;
 	  check_pc ();
-	  monitor_call (FC_TAIL_CALL);
 	  break;		/* JMP indexed */
 	case 0x6f:
 	  indexed ();
@@ -2316,7 +2276,6 @@ int m6809_execute (int cycles)
 	  cpu_clk -= 4;
 	  PC = ea;
 	  check_pc ();
-	  monitor_call (FC_TAIL_CALL);
 	  break;		/* JMP extended */
 	case 0x7f:
 	  extended ();
@@ -2912,7 +2871,6 @@ int m6809_execute (int cycles)
     }
   while (cpu_clk > 0);
 
-cpu_exit:
    cpu_period -= cpu_clk;
    cpu_clk = cpu_period;
    total_nb_cycles_exec += cpu_period;

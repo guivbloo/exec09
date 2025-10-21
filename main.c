@@ -27,12 +27,8 @@ struct option
 } 
 
 option_table[] = {
-	{ 'd', "debug", "Enter the monitor immediately",
-		TRUE, FALSE, TRUE, NULL, sim_set_debug, NULL},
 	{ 'h', "help", NULL,
 		FALSE, FALSE, FALSE, do_help, NULL, NULL},
-	{ 'b', "binary", "Program is in .bin format",
-		FALSE, FALSE, TRUE, NULL, sim_set_binary, NULL},
 	{ 't', "loadmap", "" },
 	{ 's', "machine", "Specify the machine (exact hardware) to emulate",
 		FALSE, TRUE, FALSE, NULL, NULL, sim_set_machine_name},

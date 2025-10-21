@@ -7,12 +7,9 @@
 #include "simulator.h"
 #include "utils_time.h"
 #include "machine.h"
-#include "debugger.h"
 #include "logging.h"
 #include "symtab.h"
 
-/* Nonzero if SWI2 should be reported with a postbyte */
-int os9call = 0;
 
 /* The frequency of the emulated CPU, in megahertz */
 unsigned int sim_freq = 4;
@@ -23,35 +20,9 @@ unsigned int sim_freq = 4;
 */
 unsigned int cycles_per_tick = 1;
 
-/* Nonzero if debugging support is turned on */
-BOOLEAN debug_enabled = FALSE;
-
-/* When nonzero, indicates the total number of cycles before an automated
-exit.  This is to help speed through test cases that never finish. */
-int max_cycles = 0;
-
-/* The file to be loaded is a .bin file */
-BOOLEAN binary = FALSE;
-
 char *machine_name = "bloo";
 
 char *prog_name = NULL;
-
-void sim_set_debug(BOOLEAN bool)
-{
-	debug_enabled = bool;
-} 
-
-BOOLEAN sim_get_debug_status()
-{
-	return (debug_enabled);
-}
-
-
-void sim_set_binary(BOOLEAN bool)
-{
-    binary = bool;
-} 
 
 void sim_set_machine_name(char *name)
 {
@@ -62,11 +33,6 @@ void sim_set_prog_name(char *name)
 {
     prog_name = name;
 }   
-
-int sim_get_os9call(void)
-{
-    return (os9call);
-}  
 
 /*
  * Check if the CPU should idle.
@@ -93,7 +59,6 @@ void idle_loop (void)
 
 	gettimeofday (&now, NULL);
 	real_ms = time_diff (&last, &now);
-		printf("real_ms:%d\n",real_ms);
 
 	last = now;
 
@@ -108,7 +73,6 @@ void idle_loop (void)
 	{
 		total_ms_elapsed -= 100;
 		machine_periodic ();
-		debugger_periodic();
 	}
 
 	delay = sim_ms - real_ms;
@@ -125,25 +89,9 @@ int sim_init()
 	int rc;
     init_time();
 	sym_init();
-    if (binary)
-	{
-		/* Binary option: Load directly the .bin during machine_init*/
-		machine_init (machine_name, prog_name);
-	}
-	else
-	{
-		/* The machine loader cannot deal with image files, so initialize the machine first, passing it a NULL
-		filename, then load the image file in S19 or hex format through the debugger afterwards. */
-		machine_init (machine_name, NULL);
-		debugger_load_image(prog_name);
-	}
-	/* OK, ready to run.  Reset the machine first. */
-	if (prog_name)
-		machine_reset ();
-	else
-		sim_set_debug(TRUE);
-		
-	debugger_init ();
+	machine_init (machine_name);
+	machine_load_image(prog_name);
+	machine_reset ();
 }
 
 int sim_run()
@@ -156,12 +104,7 @@ int sim_run()
 		/* Align with real time*/
 		idle_loop ();
 
-
-		if ((max_cycles > 0) && (nb_cycles > max_cycles))
-			return (1);
-
-	} while(debugger_get_exitcmd() != TRUE);
-	printf("Exiting after %lu cycles in %ld ms\n", nb_cycles, get_elapsed_realtime());
+	} while(1);
 	return 0;
 }
 
@@ -220,6 +163,5 @@ void sim_exit (uint8_t exit_code)
 		}
 	}
 	*/
-	debugger_exit();
 	exit (exit_code);
 }
