@@ -4,15 +4,13 @@
 #include <stdlib.h>
 #include "types.h"
 #include "simulator.h"
-#include "io_com_udp.h"
 #include "io_file.h"
 #include "symtab.h"
 #include "monitor.h"
 #include "command.h"
 #include "bus_access.h"
 #include "os9syscalls.h"
-//#include "machine.h"
-#include "logging.h"
+#include "m6809.h"
 
 #define S_NAMED 0x1
 #define S_OFFSET 0x2
@@ -30,16 +28,42 @@
 #define PROMPT_CYCLES 0x2
 #define PROMPT_INSN 0x4
 
-#define COMMAND_SRC_CLIENT_PORT 9002
-#define COMMAND_DST_SERVER_PORT 7403
-#define COMMAND_SRC_SERVER_PORT 9004
-
 struct symbol_table {
 	struct symbol *addr_to_symbol[0x10000];
 	char *name_area;
 	int name_area_free;
 	char *name_area_next;
 };
+
+typedef unsigned int thread_id_t;
+
+typedef struct
+{
+   int id : 8;
+   thread_id_t tid;
+} thread_t;
+
+typedef struct
+{
+   unsigned int id : 8;
+   unsigned int used : 1;
+   unsigned int enabled : 1;
+   unsigned int conditional : 1;
+   unsigned int threaded : 1;
+   unsigned int on_read : 1;
+   unsigned int on_write : 1;
+   unsigned int on_execute : 1;
+   unsigned int size : 4;
+   unsigned int keep_running : 1;
+	unsigned int temp : 1;
+	unsigned int last_write : 16;
+	unsigned int write_mask : 16;
+   absolute_address_t addr;
+   char condition[128];
+   thread_id_t tid;
+   unsigned int pass_count;
+   unsigned int ignore_count;
+} breakpoint_t;
 
 
 struct breakpoint {
@@ -1207,6 +1231,18 @@ int monitor_load_map_file (const char *name)
 	return 0;
 }
 
+int load_bin(FILE *fp)
+{
+    unsigned int addr = 0;
+    int byte;
+    while ((byte = fgetc(fp)) != EOF)
+    {
+        bus_write8(addr++, (UINT8)byte);
+    }
+    fclose(fp);
+    return 0;
+}
+
 int load_hex (FILE *fp)
 {
   unsigned int count, addr, type, data, checksum;
@@ -1340,33 +1376,37 @@ int load_s19(FILE *fp)
 /* Auto-detect image file type and load it. For this to work,
    the machine must already be initialized.
 */
-int monitor_load_image (const char *name)
+int monitor_load_image(const char *name)
 {
-  unsigned int count, addr, type;
-  FILE *fp;
+	unsigned int count, addr, type;
+	FILE *fp;
 
-  fp = file_open(NULL, name, "r");
-  if (fp == NULL)
+	fp = fopen(name, "r");
+	if (fp == NULL)
     {
-      printf("failed to open image file %s.\n", name);
-      return 1;
+    	printf("failed to open image file %s.\n", name);
+    	return 1;
     }
 
   if (fscanf (fp, "S%1x%2x%4x", &type, &count, &addr) == 3)
     {
         rewind(fp);
-        return load_s19(fp);
+        load_s19(fp);
+        monitor_load_map_file(name);
     }
   else if (fscanf (fp, ":%2x%4x%2x", &count, &addr, &type) == 3)
     {
         rewind(fp);
-        return load_hex(fp);
+        load_hex(fp);
+        monitor_load_map_file(name);
     }
   else
     {
-      printf ("unrecognised format in image file %s.\n", name);
-        return 1;
+      	rewind(fp);
+        load_bin(fp);
+        monitor_load_map_file(name);
     }
+    return 0;
 }
 
 const char* monitor_addr_name (target_addr_t target_addr)
@@ -1395,22 +1435,20 @@ static void monitor_signal (int sigtype)
 
 void monitor_init (void)
 {
+  sym_init ();  
+}
+
+void init (void)
+{
   BOOLEAN bool;
 	fctab[0].entry_point = bus_read16 (0xfffe);
 	memset (&fctab[0].entry_regs, 0, sizeof (struct cpu_regs));
 	current_function_call = &fctab[0];
 	auto_break_insn_count = 0;
-	signal (SIGINT, monitor_signal);
-	//bool = sim_get_debug_status();
-  bool= 0;
-	monitor_set_debug(bool);
 }
 
 int check_break (void)
 {
-	if (dump_every_insn)
-		print_current_insn ();
-
 	if (auto_break_insn_count > 0)
 		if (--auto_break_insn_count == 0)
 			return 1;
@@ -1456,17 +1494,25 @@ void command_insn_hook (void)
 /*
 Monitor entry point
 */
-int monitor_run (int cycles)
+//recalage temporel a faire ici
+int monitor_run ()
 {
+  int cycles = 0;
+  cycles = m6809_execute(1);
+}
+/*
   do
   {
+    //Check for breakpoints
     command_insn_hook ();
+    if (dump_every_insn)
+		  print_current_insn ();
     if (check_break () != 0)
 			monitor_set_debug(TRUE);
 		if (monitor_get_debug_status() != FALSE)
 			if (monitor6809 () != 0)
 				goto cpu_exit;
-    m6809_execute(1);
+
   } while (condition);
   
 
@@ -1477,3 +1523,4 @@ int monitor_run (int cycles)
   monitor_set_debug(FALSE);
 	return rc;
 }
+  */

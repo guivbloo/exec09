@@ -44,6 +44,7 @@ struct x_symbol * find_symbol (target_addr_t value);
 
 /* --- Functions for monitor manipulation --- */
 void monitor_init (void); 
+int monitor_run (); 
 int check_break (void);
 int monitor6809 (void);
 int dasm (char *, absolute_address_t);

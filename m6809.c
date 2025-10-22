@@ -6,7 +6,6 @@
 #include "utils_time.h"
 #include "m6809.h"
 #include "bus_access.h"
-#include "logging.h"
 
 
 #define E_FLAG 0x80

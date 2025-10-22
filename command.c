@@ -7,7 +7,6 @@
 #include "io_file.h"
 #include "bus_access.h"
 #include "types.h"
-#include "logging.h"
 #include <sys/errno.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -38,35 +37,9 @@ typedef void (*command_handler_t) (void);
 
 typedef void (*virtual_handler_t) (unsigned long *val, int writep);
 
-typedef unsigned int thread_id_t;
 
-typedef struct
-{
-   int id : 8;
-   thread_id_t tid;
-} thread_t;
 
-typedef struct
-{
-   unsigned int id : 8;
-   unsigned int used : 1;
-   unsigned int enabled : 1;
-   unsigned int conditional : 1;
-   unsigned int threaded : 1;
-   unsigned int on_read : 1;
-   unsigned int on_write : 1;
-   unsigned int on_execute : 1;
-   unsigned int size : 4;
-   unsigned int keep_running : 1;
-	unsigned int temp : 1;
-	unsigned int last_write : 16;
-	unsigned int write_mask : 16;
-   absolute_address_t addr;
-   char condition[128];
-   thread_id_t tid;
-   unsigned int pass_count;
-   unsigned int ignore_count;
-} breakpoint_t;
+
 
 
 

@@ -7,8 +7,7 @@
 #include "simulator.h"
 #include "utils_time.h"
 #include "machine.h"
-#include "logging.h"
-#include "symtab.h"
+#include "monitor.h"
 
 
 /* The frequency of the emulated CPU, in megahertz */
@@ -84,13 +83,14 @@ void idle_loop (void)
 	}
 }
 
-int sim_init()
+int sim_init(char *prog_name)
 {
 	int rc;
     init_time();
-	sym_init();
+	monitor_init();
 	machine_init (machine_name);
-	machine_load_image(prog_name);
+	if(prog_name)
+		monitor_load_image (prog_name);
 	machine_reset ();
 }
 
@@ -100,7 +100,7 @@ int sim_run()
 	do
 	{
 
-		nb_cycles += machine_run (cycles_per_tick);
+		nb_cycles += machine_run ();
 		/* Align with real time*/
 		idle_loop ();
 

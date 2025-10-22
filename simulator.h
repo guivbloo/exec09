@@ -11,7 +11,7 @@ BOOLEAN sim_get_debug_status();
 
 int sim_get_os9call(void);
 
-int sim_init();
+int sim_init(char *prog_name);
 int sim_run();
 
 void sim_error (const char *format, ...);
