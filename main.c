@@ -7,7 +7,6 @@
 #include "utils_time.h"
 #include "types.h"
 #include "simulator.h"
-#include "logging.h"
 
 
 int do_help (const char *arg __attribute__((unused)));
@@ -178,8 +177,7 @@ int main (int argc, char *argv[])
 {
 	
 	parse_args (argc, argv);
-	log_init(STDOUT, NULL);
-	sim_init();
+	sim_init(NULL);
 	sim_run();
 	sim_exit (0);
 	return (0);

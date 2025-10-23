@@ -24,7 +24,7 @@
 
 
 #define PROMPT "(dbg) "
-#define MAX_BREAKS 32
+
 #define MAX_DISPLAYS 32
 #define MAX_HISTORY 10
 #define MAX_THREADS 64
@@ -65,9 +65,7 @@ typedef enum
 /********************* Global Data ************************/
 /**********************************************************/
 
-unsigned int break_count = 0;
-breakpoint_t breaktab[MAX_BREAKS];
-unsigned int active_break_count = 0;
+
 
 unsigned int display_count = 0;
 display_t displaytab[MAX_DISPLAYS];
@@ -79,23 +77,15 @@ absolute_address_t examine_addr = 0;
 unsigned int examine_repeat = 1;
 datatype_t examine_type;
 
-/* Thread tracking. thread_current points to a location in
- * target memory where the current thread ID is kept.  thread_id
- * is the debugger's current cached value of that, to avoid
- * reading memory constantly.  The size allows for targets to
- * define the ID format differently. */
-unsigned int thread_id_size = 2;
-absolute_address_t thread_current;
-absolute_address_t thread_id = 0;
+
+
 thread_t threadtab[MAX_THREADS];
 
 #define MAX_CMD_QUEUES 8
 int command_stack_depth = -1;
 cmdqueue_t command_stack[MAX_CMD_QUEUES];
 
-#define MAX_TRACE 256
-target_addr_t trace_buffer[MAX_TRACE];
-unsigned int trace_offset = 0;
+
 
 int stop_after_ms = 0;
 
@@ -112,7 +102,6 @@ unsigned int irq_cycle_tab[IRQ_CYCLE_COUNTS] = { 0, };
 unsigned int irq_cycle_entry = 0;
 unsigned long irq_cycles = 0;
 
-unsigned long eval (char *expr, char *eflag);
 unsigned long eval_mem (char *expr, eval_mode_t mode, char *eflag);
 static int print_insn_long (absolute_address_t addr);
 extern int auto_break_insn_count;
@@ -124,24 +113,9 @@ FILE *command_input;
 /******************** 6809 Functions **********************/
 /**********************************************************/
 
-void print_device_name (unsigned int devno)
-{
-   printf ("%02X", devno);
-}
 
-void print_addr (absolute_address_t addr)
-{
-   const char *name;
-   print_device_name (addr >> 28);
-   putchar (':');
-   printf ("0x%04lX", addr & 0xFFFFFF);
 
-   name = sym_lookup (PROGRAM_SYMTAB_T, addr);
-   if (name)
-      printf ("  %-18.18s", name);
-   else
-      printf ("%-20.20s", "");
-}
+
 
 
 /**********************************************************/
@@ -441,102 +415,6 @@ unsigned long eval(char *expr, char *eflag)
    }
 
    return val;
-}
-
-void brk_enable(breakpoint_t *br, int flag)
-{
-   if (br->enabled != flag)
-   {
-      br->enabled = flag;
-      if (flag)
-         active_break_count++;
-      else
-         active_break_count--;
-   }
-}
-
-breakpoint_t* brkalloc (void)
-{
-   unsigned int n;
-   for (n = 0; n < MAX_BREAKS; n++)
-      if (!breaktab[n].used)
-      {
-         breakpoint_t *br = &breaktab[n];
-         br->used = 1;
-         br->id = n;
-         br->conditional = 0;
-         br->threaded = 0;
-         br->keep_running = 0;
-         br->ignore_count = 0;
-         br->temp = 0;
-         br->on_execute = 0;
-         brk_enable (br, 1);
-         return br;
-      }
-   return NULL;
-}
-
-void brkfree (breakpoint_t *br)
-{
-   brk_enable (br, 0);
-   br->used = 0;
-}
-
-void brkfree_temps (void)
-{
-   unsigned int n;
-   for (n = 0; n < MAX_BREAKS; n++)
-      if (breaktab[n].used && breaktab[n].temp)
-      {
-         brkfree (&breaktab[n]);
-      }
-}
-
-breakpoint_t* brkfind_by_addr (absolute_address_t addr)
-{
-   unsigned int n;
-   for (n = 0; n < MAX_BREAKS; n++)
-      if (breaktab[n].addr == addr)
-         return &breaktab[n];
-   return NULL;
-}
-
-breakpoint_t* brkfind_by_id (unsigned int id)
-{
-   return &breaktab[id];
-}
-
-void brkprint (breakpoint_t *brkpt)
-{
-   if (!brkpt->used)
-      return;
-
-   if (brkpt->on_execute)
-      printf ("Breakpoint");
-   else
-   {
-      printf ("Watchpoint");
-      if (brkpt->on_read)
-         printf ("(%s)", brkpt->on_write ? "RW" : "RO");
-   }
-
-   printf (" %d at ", brkpt->id);
-   print_addr (brkpt->addr);
-   if (!brkpt->enabled)
-      printf (" (disabled)");
-   if (brkpt->conditional)
-      printf (" if %s", brkpt->condition);
-   if (brkpt->threaded)
-      printf (" on thread %d", brkpt->tid);
-   if (brkpt->keep_running)
-      printf (", print-only");
-   if (brkpt->temp)
-      printf (", temp");
-   if (brkpt->ignore_count)
-      printf (", ignore %d times\n", brkpt->ignore_count);
-   if (brkpt->write_mask)
-      printf (", mask 0x%02X\n", brkpt->write_mask);
-   putchar ('\n');
 }
 
 display_t* display_alloc (void)
@@ -1584,94 +1462,14 @@ int command_loop (void)
    return (exit_command_loop);
 }
 
-void breakpoint_hit (breakpoint_t *br)
-{
-   /* TODO don't know how best to handle errors here. */
-   char eflag = 0; /* unused */
-   if (br->threaded && (thread_id != br->tid))
-      return;
-
-   if (br->conditional)
-   {
-      if (eval (br->condition, &eflag) == 0)
-         return;
-   }
-
-   if (br->ignore_count)
-   {
-      --br->ignore_count;
-      return;
-   }
-
-   if(br->keep_running == 0)
-	{
-		monitor_set_debug(ACTIVATED);
-	}
-	else
-	{
-		monitor_set_debug(DEACTIVATED);	
-	}
-}
-
-void command_trace_insn (target_addr_t addr)
-{
-   trace_buffer[trace_offset++] = addr;
-   trace_offset %= MAX_TRACE;
-}
 
 
 
 
-void command_read_hook (absolute_address_t addr)
-{
-   breakpoint_t *br;
 
-   if (active_break_count == 0)
-      return;
 
-   br = brkfind_by_addr (addr);
-   if (br && br->enabled && br->on_read)
-   {
-      printf ("Watchpoint %d triggered. [pc=0x%04X ", br->id, m6809_get_pc());
-      print_addr (addr);
-      printf ("]\n");
-      breakpoint_hit (br);
-   }
-}
 
-void command_write_hook (absolute_address_t addr, uint8_t val)
-{
-   breakpoint_t *br;
 
-   if (active_break_count != 0)
-   {
-      br = brkfind_by_addr (addr);
-      if (br && br->enabled && br->on_write)
-      {
-         if (br->write_mask)
-         {
-            int mask_ok = ((br->last_write & br->write_mask) !=
-                           (val & br->write_mask));
-            br->last_write = val;
-            if (!mask_ok)
-               return;
-         }
-
-         breakpoint_hit (br);
-
-         printf ("Watchpoint %d triggered. [pc=0x%04X ", br->id, m6809_get_pc());
-         print_addr (addr);
-         printf (" = 0x%02X]\n", val);
-      }
-   }
-
-   /* On any write, if threading is enabled then see if the
-    * thread ID changed by re-reading it from the target. */
-   if (thread_id_size && (addr == thread_current + thread_id_size - 1))
-   {
-      command_change_thread ();
-   }
-}
 
 void command_periodic (void)
 {

@@ -4,8 +4,10 @@
 #include "device.h"
 #include "machine.h"
 #include "command.h"
-#include "logging.h"
 
+
+void (*bus_read_hook)(absolute_address_t addr) = NULL;
+void (*bus_write_hook)(absolute_address_t addr, uint8_t val) = NULL;
 
 /**
  * Called by the CPU to read a byte.
@@ -21,13 +23,7 @@ uint8_t bus_read8 (unsigned int addr)
 	struct hw_device *dev = machine_find_device (addr, map->devid);
 	struct hw_class *class_ptr = dev->class_ptr;
 	unsigned long phy_addr = map->offset + addr % BUS_MAP_SIZE;
-
-	if (!(map->flags & MAP_READABLE))
-	{
-		//machine->fault (addr, FAULT_NOT_READABLE);
-        log_message(ERROR,"Attempt to read a not readable address");
-	}
-	command_read_hook (absolute_from_reladdr (map->devid, phy_addr));
+	bus_read_hook (absolute_from_reladdr (map->devid, phy_addr));
 	return (*class_ptr->read) (dev, phy_addr);
 }
 
@@ -38,10 +34,8 @@ uint16_t bus_read16 (unsigned int addr)
 	struct hw_class *class_ptr = dev->class_ptr;
 	unsigned long phy_addr = map->offset + addr % BUS_MAP_SIZE;
 
-	if (!(map->flags & MAP_READABLE))
-		//do_fault (addr, FAULT_NOT_READABLE);
-        log_message(ERROR, "Attempt to read a not readable address");
-	command_read_hook (absolute_from_reladdr (map->devid, phy_addr));
+
+	bus_read_hook (absolute_from_reladdr (map->devid, phy_addr));
 	return ((*class_ptr->read) (dev, phy_addr) << 8)
 			| (*class_ptr->read) (dev, phy_addr+1);
 }
@@ -75,7 +69,7 @@ void bus_write8 (unsigned int addr, uint8_t val)
         /* silently ignore the write */
     }
     /* do this regardless (may trigger watchpoint) */
-     command_write_hook (absolute_from_reladdr (map->devid, phy_addr), val);
+     bus_write_hook (absolute_from_reladdr (map->devid, phy_addr), val);
 }
 
 void bus_write8_abs (absolute_address_t addr, uint8_t val)
