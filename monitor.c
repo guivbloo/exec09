@@ -26,9 +26,10 @@
 #define PROMPT_CYCLES 0x2
 #define PROMPT_INSN 0x4
 
-#define MAX_BREAKS 32
+#define MAX_HISTORY 10
 
 
+unsigned long eval(char *expr, char *eflag);
 
 struct symbol_table {
 	struct symbol *addr_to_symbol[0x10000];
@@ -37,35 +38,10 @@ struct symbol_table {
 	char *name_area_next;
 };
 
-typedef unsigned int thread_id_t;
 
-typedef struct
-{
-   int id : 8;
-   thread_id_t tid;
-} thread_t;
 
-typedef struct
-{
-   unsigned int id : 8;
-   unsigned int used : 1;
-   unsigned int enabled : 1;
-   unsigned int conditional : 1;
-   unsigned int threaded : 1;
-   unsigned int on_read : 1;
-   unsigned int on_write : 1;
-   unsigned int on_execute : 1;
-   unsigned int size : 4;
-   unsigned int keep_running : 1;
-	unsigned int temp : 1;
-	unsigned int last_write : 16;
-	unsigned int write_mask : 16;
-   absolute_address_t addr;
-   char condition[128];
-   thread_id_t tid;
-   unsigned int pass_count;
-   unsigned int ignore_count;
-} breakpoint_t;
+absolute_address_t thread_current;
+
 
 
 struct breakpoint {
@@ -78,7 +54,7 @@ unsigned int break_count = 0;
 breakpoint_t breaktab[MAX_BREAKS];
 unsigned int active_break_count = 0;
 
-#define MAX_TRACE 256
+
 target_addr_t trace_buffer[MAX_TRACE];
 unsigned int trace_offset = 0;
 
@@ -88,8 +64,9 @@ unsigned int trace_offset = 0;
  * reading memory constantly.  The size allows for targets to
  * define the ID format differently. */
 unsigned int thread_id_size = 2;
-absolute_address_t thread_current;
 
+unsigned int history_count = 0;
+unsigned long historytab[MAX_HISTORY];
 /* The function call stack */
 struct function_call fctab[MAX_FUNCTION_CALLS];
 
@@ -104,7 +81,7 @@ BOOLEAN debug_st = DEACTIVATED;
 
 absolute_address_t thread_id = 0;
 
-unsigned long eval (char *expr, char *eflag);
+//unsigned long eval (char *expr, char *eflag);
 
 
 int dump_every_insn = 0;
@@ -977,24 +954,233 @@ const char* absolute_addr_name (absolute_address_t addr)
    return buf;
 }
 
-void print_device_name (unsigned int devno)
+unsigned long target_read (absolute_address_t addr, unsigned int size)
 {
-   printf ("%02X", devno);
-}
-
-void print_addr (absolute_address_t addr)
-{
-   const char *name;
-   print_device_name (addr >> 28);
-   putchar (':');
-   printf ("0x%04lX", addr & 0xFFFFFF);
-
-   name = sym_lookup (PROGRAM_SYMTAB_T, addr);
-   if (name)
-      printf ("  %-18.18s", name);
+   if (size == 1)
+      return bus_read8_abs(addr);
    else
-      printf ("%-20.20s", "");
+      return bus_read16_abs(addr);
 }
+
+/*
+ * Evaluate a memory expression, as an lvalue or rvalue.
+ */
+unsigned long eval_mem (char *expr, eval_mode_t mode, char *eflag)
+{
+   char *p;
+   unsigned long val;
+
+   /* First evaluate the address */
+   if ((p = strchr (expr, ':')) != NULL)
+   {
+      *p++ = '\0';
+      val = MAKE_ADDR (eval (expr, eflag), eval (p, eflag));
+   }
+   else if (isalpha (*expr) || (*expr == '_'))
+   {
+      if (!sym_find (PROGRAM_SYMTAB_T, expr, &val, 0));
+      else if (!sym_find (INTERNAL_SYMTAB_T, expr, &val, 0));
+      else
+      {
+         val = 0;
+         *eflag = *eflag | 8;
+      }
+   }
+   else
+   {
+      val = to_absolute (eval (expr, eflag));
+   }
+
+   /* If mode is RVALUE, then dereference it */
+   if (mode == RVALUE)
+      val = target_read (val, 1);
+
+   return val;
+}
+
+unsigned long eval_virtual (const char *name, char *eflag)
+{
+   unsigned long val;
+
+   /* The name of the virtual is looked up in the auto
+    * symbol table, which holds a function that can
+    * compute the value on-the-fly. If not found there
+    * a value of 0 is returned along with an error flag.
+    */
+   if (!sym_find (AUTO_SYMTAB_T, name, &val, 0))
+   {
+      virtual_handler_t virtual = (virtual_handler_t)val;
+      virtual (&val, 0);
+   }
+   else
+   {
+      *eflag = *eflag | 0x10;
+      val = 0;
+   }
+
+   return val;
+}
+
+unsigned long eval_historical (unsigned int id)
+{
+   return historytab[id % MAX_HISTORY];
+}
+
+int fold_binary (char *expr, const char op, unsigned long *valp, char *eflag)
+{
+   char *p;
+   unsigned long val1, val2;
+
+   if ((p = strchr (expr, op)) == NULL)
+      return 0;
+
+   /* If the operator is the first character of the expression,
+    * then it's really a unary and shouldn't match here.
+    */
+   if (p == expr)
+      return 0;
+
+   *p++ = '\0';
+   val1 = eval (expr, eflag);
+   val2 = eval (p, eflag);
+
+   switch (op)
+   {
+      case '+': *valp = val1 + val2; break;
+      case '-': *valp = val1 - val2; break;
+      case '*': *valp = val1 * val2; break;
+      case '/': *valp = val1 / val2; break;
+   }
+   return 1;
+}
+
+void assign_virtual (const char *name, unsigned long val, char *eflag)
+{
+   unsigned long v_val;
+
+   if (!sym_find (AUTO_SYMTAB_T, name, &v_val, 0))
+   {
+      virtual_handler_t virtual = (virtual_handler_t)v_val;
+      virtual (&val, 1);
+      return;
+   }
+   else if (!strcmp (name, "thread_current"))
+   {
+      thread_current = val;
+   }
+   else
+   {
+      *eflag = *eflag | 0x40; /* not found */
+   }
+}
+
+void eval_assign (char *expr, unsigned long val, char *eflag)
+{
+   if (*expr == '$')
+   {
+      assign_virtual (expr+1, val, eflag);
+   }
+   else
+   {
+      absolute_address_t dst = eval_mem(expr, LVALUE, eflag);
+
+      if (!*eflag)
+         bus_write8_abs(dst, val);
+   }
+}
+
+char* match_binary (char *expr, const char *op, char **secondp)
+{
+   char *p;
+   p = strstr (expr, op);
+   if (!p)
+      return NULL;
+   *p = '\0';
+   p += strlen (op);
+   *secondp = p;
+   return expr;
+}
+
+int fold_comparisons (char *expr, unsigned long *value, char *eflag)
+{
+   char *p;
+   if (match_binary (expr, "==", &p))
+      *value = (eval (expr, eflag) == eval (p, eflag));
+   else if (match_binary (expr, "!=", &p))
+      *value = (eval (expr, eflag) != eval (p, eflag));
+   else
+      return 0;
+
+   return 1;
+}
+
+
+/*
+ * Evaluate an expression, given as a string.
+ * The return is the value (rvalue) of the expression.
+ *
+ * TODO:
+ * - Support typecasts ( {TYPE}ADDR )
+ *
+ */
+unsigned long eval(char *expr, char *eflag)
+{
+   char *p;
+   unsigned long val;
+
+   if (fold_comparisons (expr, &val, eflag));
+   else if ((p = strchr (expr, '=')) != NULL)
+   {
+      /* Assignment. Change = to 0 to break the string in two.
+       * Remainder of eval is the LHS, p is the RHS
+       */
+      *p++ = '\0';
+      val = eval (p, eflag); /* Evaluate RHS */
+      eval_assign (expr, val, eflag); /* Evaluate LHS and assign RHS value */
+   }
+   else if (fold_binary (expr, '+', &val, eflag));
+   else if (fold_binary (expr, '-', &val, eflag));
+   else if (fold_binary (expr, '*', &val, eflag));
+   else if (fold_binary (expr, '/', &val, eflag));
+   else if (*expr == '$')
+   {
+      if (expr[1] == '$') /* $$n */
+         val = eval_historical (history_count-1 - strtoul (expr+2, NULL, 10));
+      else if (isdigit (expr[1])) /* $n */
+         val = eval_historical (strtoul (expr+1, NULL, 10));
+      else if (!expr[1]) /* $ */
+         val = eval_historical (history_count-1);
+      else /* variable from one of the symbol tables */
+         val = eval_virtual (expr+1, eflag);
+   }
+   /* For a symbol 'fred' 'print fred' and 'set fred=4'
+    * treat fred as an RVALUE so they read and write memory
+    * at the address associated with the value of fred.
+    * 'print &fred' and 'set &fred=4' display and change
+    * the value of the symbol fred.
+    */
+   else if (*expr == '&')
+   {
+      val = eval_mem (expr+1, LVALUE, eflag);
+   }
+   else if (isalpha (*expr) || (*expr == '_'))
+   {
+      val = eval_mem (expr, RVALUE, eflag);
+   }
+   /* Try to interpet it as a numeric literal */
+   else
+   {
+      val = strtoul (expr, &p, 0);
+      if (expr==p)
+      {
+         *eflag = *eflag | 0x20;
+      }
+   }
+
+   return val;
+}
+
+
 
 
 
@@ -1064,38 +1250,7 @@ breakpoint_t* brkfind_by_id (unsigned int id)
    return &breaktab[id];
 }
 
-void brkprint (breakpoint_t *brkpt)
-{
-   if (!brkpt->used)
-      return;
 
-   if (brkpt->on_execute)
-      printf ("Breakpoint");
-   else
-   {
-      printf ("Watchpoint");
-      if (brkpt->on_read)
-         printf ("(%s)", brkpt->on_write ? "RW" : "RO");
-   }
-
-   printf (" %d at ", brkpt->id);
-   print_addr (brkpt->addr);
-   if (!brkpt->enabled)
-      printf (" (disabled)");
-   if (brkpt->conditional)
-      printf (" if %s", brkpt->condition);
-   if (brkpt->threaded)
-      printf (" on thread %d", brkpt->tid);
-   if (brkpt->keep_running)
-      printf (", print-only");
-   if (brkpt->temp)
-      printf (", temp");
-   if (brkpt->ignore_count)
-      printf (", ignore %d times\n", brkpt->ignore_count);
-   if (brkpt->write_mask)
-      printf (", mask 0x%02X\n", brkpt->write_mask);
-   putchar ('\n');
-}
 
 
 
@@ -1638,82 +1793,15 @@ void command_trace_insn (target_addr_t addr)
    trace_offset %= MAX_TRACE;
 }
 
-void command_insn_hook (void)
-{
-   target_addr_t pc;
-   absolute_address_t abspc;
-   breakpoint_t *br;
-
-   pc = m6809_get_pc ();
-   command_trace_insn (pc);
-
-   if (active_break_count == 0)
-      return;
-
-   abspc = to_absolute (pc);
-   br = brkfind_by_addr (abspc);
-   if (br && br->enabled && br->on_execute)
-   {
-      breakpoint_hit (br);
-      if (monitor_get_debug_status() == 0)
-         return;
-      if (br->temp)
-         brkfree (br);
-      else
-         printf ("Breakpoint %d reached.\n", br->id);
-   }
-}
 
 
-void command_read_hook (absolute_address_t addr)
-{
-   breakpoint_t *br;
 
-   if (active_break_count == 0)
-      return;
 
-   br = brkfind_by_addr (addr);
-   if (br && br->enabled && br->on_read)
-   {
-      printf ("Watchpoint %d triggered. [pc=0x%04X ", br->id, m6809_get_pc());
-      print_addr (addr);
-      printf ("]\n");
-      breakpoint_hit (br);
-   }
-}
-
-void command_write_hook (absolute_address_t addr, uint8_t val)
-{
-   breakpoint_t *br;
-
-   if (active_break_count != 0)
-   {
-      br = brkfind_by_addr (addr);
-      if (br && br->enabled && br->on_write)
-      {
-         if (br->write_mask)
-         {
-            int mask_ok = ((br->last_write & br->write_mask) !=
-                           (val & br->write_mask));
-            br->last_write = val;
-            if (!mask_ok)
-               return;
-         }
-
-         breakpoint_hit (br);
-
-         printf ("Watchpoint %d triggered. [pc=0x%04X ", br->id, m6809_get_pc());
-         print_addr (addr);
-         printf (" = 0x%02X]\n", val);
-      }
-   }
-}
 
 void monitor_init (void)
 {
   sym_init ();  
-  bus_read_hook = command_read_hook;
-  bus_write_hook = command_write_hook;
+
 }
 
 

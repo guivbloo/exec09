@@ -7,10 +7,13 @@
 #include "utils_time.h"
 #include "types.h"
 #include "simulator.h"
+#include "gui_monitor.h"
+#include "cli_monitor.h"
 
 
 int do_help (const char *arg __attribute__((unused)));
 char *program_name = NULL;
+int use_gui = 0;
 
 
 struct option
@@ -176,15 +179,20 @@ next_arg:
 
 int main (int argc, char *argv[])
 {
+
 	parse_args (argc, argv);
+					printf("Starting CLI monitor...\n");
+
 	sim_init(program_name);
-	if (use_gui)
-		gui_monitor_run();
-	else
-	{
+	//if (use_gui)
+		//gui_monitor_run();
+
+	//else
+	//{
+
 		cli_monitor_init();
 		cli_monitor_run();
-	}
+	//}
 		
 	//sim_run();
 	sim_exit (0);

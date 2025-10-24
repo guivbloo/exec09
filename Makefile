@@ -2,7 +2,7 @@ SRCS=m6809.c \
 	device_rom.c device_ram.c\
 	device_m6850.c device_m6840.c device.c \
 	monitor.c bus_access.c \
-	symtab.c  simulator.c main.c\
+	symtab.c  simulator.c cli_monitor.c main.c\
 	machine.c machine_bloo.c \
 	io_file.c utils_time.c
 
