@@ -10,6 +10,7 @@
 
 
 int do_help (const char *arg __attribute__((unused)));
+char *program_name = NULL;
 
 
 struct option
@@ -112,7 +113,7 @@ int process_option (struct option *opt, char *arg)
 void process_plain_argument (char *arg)
 {
 	//printf ("plain argument '%s'\n", arg);
-	sim_set_prog_name(arg);
+	program_name = arg;
 }
 
 
@@ -175,10 +176,17 @@ next_arg:
 
 int main (int argc, char *argv[])
 {
-	
 	parse_args (argc, argv);
-	sim_init(NULL);
-	sim_run();
+	sim_init(program_name);
+	if (use_gui)
+		gui_monitor_run();
+	else
+	{
+		cli_monitor_init();
+		cli_monitor_run();
+	}
+		
+	//sim_run();
 	sim_exit (0);
 	return (0);
 }

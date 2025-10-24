@@ -8,7 +8,6 @@
 #include "symtab.h"
 #include "monitor.h"
 #include "bus_access.h"
-#include "os9syscalls.h"
 #include "m6809.h"
 
 #define S_NAMED 0x1
@@ -1148,14 +1147,7 @@ int dasm (char *buf, absolute_address_t opc)
   if ((!strcmp("SWI2", op_str)))
     {
       op = bus_read8_abs (pc++);
-      if(op < 0x91)
-        {
-          buf += sprintf (buf, "%-6.6s%s", "OS9", os9syscall[op]);
-        }
-      else
-        {
-          buf += sprintf (buf, "%-6.6s#$%2x", "OS9", op);
-        }
+      buf += sprintf (buf, "%-6.6s#$%2x", "OS9", op);
     }
   else
     {
@@ -1715,13 +1707,6 @@ void command_write_hook (absolute_address_t addr, uint8_t val)
          printf (" = 0x%02X]\n", val);
       }
    }
-
-   /* On any write, if threading is enabled then see if the
-    * thread ID changed by re-reading it from the target. */
-   //if (thread_id_size && (addr == thread_current + thread_id_size - 1))
-   //{
-   //   command_change_thread ();
-   //}
 }
 
 void monitor_init (void)
@@ -1735,7 +1720,7 @@ void monitor_init (void)
 /*
 Monitor entry point
 */
-//recalage temporel a faire ici
+//recalage temporel a faire ici ou pas
 int monitor_run ()
 {
   int cycles = 0;

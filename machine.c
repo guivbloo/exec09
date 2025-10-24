@@ -327,11 +327,6 @@ void machine_update (void)
 	}
 }
 
-int machine_dump_thread(void)
-{
-	return(0);
-}
-
 void machine_periodic (void)
 {
 	return;

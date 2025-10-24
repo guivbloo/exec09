@@ -21,17 +21,10 @@ unsigned int cycles_per_tick = 1;
 
 char *machine_name = "bloo";
 
-char *prog_name = NULL;
-
 void sim_set_machine_name(char *name)
 {
     machine_name = name;
 } 
-
-void sim_set_prog_name(char *name)
-{
-    prog_name = name;
-}   
 
 /*
  * Check if the CPU should idle.
@@ -99,7 +92,6 @@ int sim_run()
 	unsigned long nb_cycles = 0;
 	do
 	{
-
 		nb_cycles += machine_run ();
 		/* Align with real time*/
 		idle_loop ();
@@ -108,60 +100,8 @@ int sim_run()
 	return 0;
 }
 
-
-/*
-void sim_error (const char *format, ...)
-{
-	va_list ap;
-
-	va_start (ap, format);
-	//fprintf (stderr, "m6809-run: (at PC=%04X) ", iPC);
-	vfprintf (stderr, format, ap);
-	va_end (ap);
-
-	if (debug_enabled)
-		debugger_set_status(ACTIVATED);
-	else {
-		debugger_exit();
-		exit (2);
-        }
-}
-*/
-
 void sim_exit (uint8_t exit_code)
 {
 	char *s;
-
-	/* On a nonzero exit, always print an error message. */
-	/*
-	if (exit_code != 0)
-	{
-		printf ("m6809-run: program exited with %d\n", exit_code);
-		if (exit_code)
-			monitor_backtrace ();
-	}
-	*/
-
-	/* If a cycle count should be printed, do that last. */
-	/*
-	if (dump_cycles_on_success)
-	{
-		printf ("%s : %ld cycles, %ld ms\n", prog_name, m6809_get_cycles (),
-			get_elapsed_realtime ());
-	}
-	*/
-
-	/*
-	if ((s = getenv ("LOG6809")) != NULL)
-	{
-		FILE *fp = fopen (s, "a");
-		if (fp)
-		{
-			fprintf (fp, "%s : %ld cycles, %ld ms\n", prog_name, m6809_get_cycles (),
-				get_elapsed_realtime ());
-			fclose (fp);
-		}
-	}
-	*/
 	exit (exit_code);
 }

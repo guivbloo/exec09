@@ -13,7 +13,6 @@ struct bus_map
 };
 
 
-
 #define MAX_CPU_ADDR 65536
 
 /* The generic bus architecture. */
@@ -62,7 +61,6 @@ typedef struct
 	const char *name;
 	void (*init) (void);
 	void (*fault) (unsigned int addr, unsigned char type);
-	void (*dump_thread) (unsigned int thread_id);
 	void (*periodic) (void);
 	void (*dump) (void);
 	void (*tick) (void);
@@ -75,7 +73,6 @@ typedef struct
 void machine_init (const char *machine_name);
 void machine_fault (unsigned int addr, unsigned char type);
 void machine_dump(void);
-int machine_dump_thread(void);
 void machine_describe (void);
 void machine_update (void);
 void machine_periodic (void);
