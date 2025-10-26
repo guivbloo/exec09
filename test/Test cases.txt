@@ -1,0 +1,22 @@
+Cas de tests
+
+
+
+1- Test CLI simulateur
+    Lancement du simulateur avec option -h
+    Lancement du simulateur avec option -s existante et non existante
+    Lancement du simulateur en CLI sans programme à exécuter
+    Lancement du simulateur en CLI avec programme à exécuter en srecord et map présent
+    Lancement du simulateur en CLI avec programme à exécuter en hex et map présent
+    Lancement du simulateur en CLI avec programme à exécuter en bin et map présent -> KO
+    Lancement du simulateur en CLI avec programme à exécuter en srecord et map pas présent
+    Lancement du simulateur en CLI avec programme à exécuter en hex et map pas présent
+    Lancement du simulateur en CLI avec programme à exécuter en bin et map pas présent -> KO
+2- Test CLI moniteur
+    Test option p (print) -> KO
+    Test option set -> KO
+    Test option x (examine) 
+    Test option b (breakpoint) -> OK
+    
+
+    

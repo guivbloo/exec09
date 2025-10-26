@@ -80,23 +80,23 @@ int sim_init(char *prog_name)
 {
 	int rc;
     init_time();
-	monitor_init();
-	machine_init (machine_name);
+	rc = machine_init (machine_name);
+	if (rc != 0)
+	{
+		return rc;
+	}
 	if(prog_name)
 		monitor_load_image (prog_name);
 	machine_reset ();
+	return 0;
 }
 
 int sim_run()
 {
 	unsigned long nb_cycles = 0;
-	do
-	{
-		nb_cycles += machine_run ();
-		/* Align with real time*/
-		idle_loop ();
-
-	} while(1);
+	nb_cycles += machine_run ();
+	/* Align with real time*/
+	idle_loop ();
 	return 0;
 }
 

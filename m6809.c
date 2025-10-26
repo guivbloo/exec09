@@ -21,6 +21,8 @@
 #define CWAI_STATE_IDLE     0
 #define CWAI_STATE_WAIT     1
 
+void (*m6809_insn_hook)(void) = NULL;
+
 /* The total number of cycles that have been executed */
 unsigned long total_nb_cycles_exec = 0;
 
@@ -1516,6 +1518,7 @@ int m6809_execute (int cycles)
 {
 	unsigned opcode;
 	cpu_period = cpu_clk = cycles;
+	m6809_insn_hook ();
 	do
 	{
 	  iPC = PC;

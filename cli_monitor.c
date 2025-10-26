@@ -32,6 +32,7 @@ extern int auto_break_insn_count;
 extern unsigned int trace_offset;
 extern target_addr_t trace_buffer[MAX_TRACE];
 extern unsigned int active_break_count;
+extern int dump_every_insn;
 
 
 struct termios old_tio, new_tio;
@@ -79,6 +80,9 @@ int exit_command_loop;
 
 int exit_command = 1;
 
+/* Display debugger */
+BOOLEAN display_debug = TRUE;
+
 
 unsigned int irq_cycle_tab[IRQ_CYCLE_COUNTS] = { 0, };
 unsigned int irq_cycle_entry = 0;
@@ -87,10 +91,68 @@ unsigned long irq_cycles = 0;
 unsigned int display_count = 0;
 display_t displaytab[MAX_DISPLAYS];
 
+absolute_address_t thread_id = 0;
+
+
 FILE *command_input;
 
+static void monitor_signal (int sigtype);
 
+void monitor_set_display_debug(BOOLEAN status)
+{
+   if (status)
+   {
+      display_debug = TRUE;
+      signal(SIGINT, SIG_DFL);
+   }
+   else
+   {
+      display_debug = FALSE;
+      signal(SIGINT, monitor_signal);
+   }
+}
 
+BOOLEAN monitor_get_display_debug (void)
+{
+	return display_debug;
+}
+
+void breakpoint_hit (breakpoint_t *br)
+{
+   /* TODO don't know how best to handle errors here. */
+   char eflag = 0; /* unused */
+   if (br->threaded && (thread_id != br->tid))
+      return;
+/*
+   if (br->conditional)
+   {
+      if (eval (br->condition, &eflag) == 0)
+         return;
+   }
+         */
+
+   if (br->ignore_count)
+   {
+      --br->ignore_count;
+      return;
+   }
+
+   if(br->keep_running == 0)
+	{
+		monitor_set_display_debug(TRUE);
+	}
+	else
+	{
+		monitor_set_display_debug(FALSE);	
+	}
+}
+
+static void monitor_signal (int sigtype)
+{
+   (void) sigtype;
+   putchar ('\n');
+   monitor_set_display_debug(TRUE);
+}
 
 
 // 1. Fonctions utilitaires et helpers
@@ -446,10 +508,23 @@ display_t* display_alloc ()
    return NULL;
 }
 
+
+
+/**
+ * @brief Retrieves the next argument from the command line input.
+ *
+ * This function is typically used to parse and return the next argument
+ * provided by the user in a command-line interface. The returned string
+ * points to the argument, or NULL if there are no more arguments.
+ *
+ * @return A pointer to the next argument as a null-terminated string,
+ *         or NULL if no more arguments are available.
+ */
 char* getarg (void)
 {
    return strtok (NULL, " \t\n");
 }
+
 
 void do_print (char *expr)
 {
@@ -483,9 +558,7 @@ int command_exec_file (const char *filename)
    return 1;
 }
 
-/****************** Command Handlers ************************/
-
-
+/
 /**
  * Handles the "set" command, which allows the user to either set an internal variable
  * or write to memory. If the argument is "var", it creates or updates an entry in the
@@ -526,6 +599,8 @@ void cmd_set (void)
          do_set (arg);
    }
 }
+
+
 
 void cmd_examine (void)
 {
@@ -674,6 +749,7 @@ void cmd_next (void)
 
 void cmd_continue (void)
 {
+   monitor_set_display_debug(FALSE);
    exit_command_loop = 0;
 }
 
@@ -908,8 +984,6 @@ void cmd_measure (void)
 
 void cmd_dump_insns (void)
 {
-   extern int dump_every_insn;
-
    char *arg = getarg ();
    if (arg)
       dump_every_insn = strtoul (arg, NULL, 0);
@@ -1100,7 +1174,7 @@ void command_periodic ( unsigned long nb_cycles_executed)
       stop_after_ms -= 100;
       if (stop_after_ms <= 0)
       {
-         monitor_set_debug(ACTIVATED);
+         monitor_set_display_debug(TRUE);
          stop_after_ms = 0;
          printf ("Stopping after time elapsed.\n");
       }
@@ -1379,6 +1453,12 @@ void command_insn_hook (void)
 
    pc = m6809_get_pc ();
    command_trace_insn (pc);
+   if(dump_every_insn != 0)
+   {
+      print_current_insn();
+   }
+   if (check_break () != 0)
+			monitor_set_display_debug(TRUE);
 
    if (active_break_count == 0)
       return;
@@ -1388,7 +1468,7 @@ void command_insn_hook (void)
    if (br && br->enabled && br->on_execute)
    {
       breakpoint_hit (br);
-      if (monitor_get_debug_status() == 0)
+      if (monitor_get_display_debug() == 0)
          return;
       if (br->temp)
          brkfree (br);
@@ -1396,6 +1476,7 @@ void command_insn_hook (void)
          printf ("Breakpoint %d reached.\n", br->id);
    }
 }
+
 
 void command_read_hook (absolute_address_t addr)
 {
@@ -1417,7 +1498,6 @@ void command_read_hook (absolute_address_t addr)
 void command_write_hook (absolute_address_t addr, uint8_t val)
 {
    breakpoint_t *br;
-
    if (active_break_count != 0)
    {
       br = brkfind_by_addr (addr);
@@ -1475,6 +1555,7 @@ int command_loop (void)
 
 void cli_monitor_init (void)
 {
+   monitor_init();
    /* Install virtual registers.  These are referenced in expressions
     * using a dollar-sign prefix (e.g. $pc).  The value of the
     * symbol is a pointer to a function (e.g. pc_virtual) which
@@ -1498,28 +1579,39 @@ void cli_monitor_init (void)
 
    print_type.format = 'X';
    print_type.size = 1;
+
    command_input = stdin;
-     bus_read_hook = command_read_hook;
-  bus_write_hook = command_write_hook;
+   bus_read_hook = command_read_hook;
+   bus_write_hook = command_write_hook;
+   m6809_insn_hook = command_insn_hook;
    /* [TODO] Why ? */
 	command_exec_file (".dbinit");
    keybuffering_defaults();
-    keybuffering(0);
+   keybuffering(0);
+   signal (SIGINT, monitor_signal);
 }
 
-void cli_monitor_run() 
+int cli_monitor_run() 
 {
     /* C'est le point d'entrée.*/
-    unsigned long nb_cycles_executed;
     /* [TODO] En fonction d'un parametre passé sur la ligne de commande, part en exécution sans afficher le prompt*/
     /* [TODO] Gestion du CTR+C pour sortir de l'exécution*/
     /* Affiche le prompt, la prochaine instruction, recupere la commande utilisateur, l'execute*/
-    command_loop();
+    if(monitor_get_display_debug())
+      command_loop();
+   if(command_get_exitcmd())
+   {
+      return 1;
+   }
+   else
+   {
+      return 0;
+   }
+   
     /* [TODO] il faut appeler machine run qui s'exécutera jusqu'à ce qu'une hook s'active  ou autre condition ou CTR+C*/
-    nb_cycles_executed = machine_run();
+//    nb_cycles_executed = machine_run();
     /*Check if we have to stop due to a runfor in progress. A mettre dans monitor. On lui fourni le nb cycle qu'on vient d'exécuter*/
     /* Attention quelque part il faut convertir en temps*/
-    command_periodic(nb_cycles_executed);
     /* Connexion des hooks fournis par le proc et le bus dans le monitor*/
     /* De la meme maniere, on peut imaginer des hooks dans les devices qui se connectent à des simulateurs dans l'interface graphique*/
     /* Les conditions d'arret du simu:

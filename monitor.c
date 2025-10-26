@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include "types.h"
-#include "simulator.h"
 #include "io_file.h"
 #include "symtab.h"
 #include "monitor.h"
@@ -76,10 +75,8 @@ struct function_call *current_function_call;
 /* Automatically break after executing this many instructions */
 int auto_break_insn_count = 0;
 
-/* Debug status */
-BOOLEAN debug_st = DEACTIVATED;
 
-absolute_address_t thread_id = 0;
+
 
 //unsigned long eval (char *expr, char *eflag);
 
@@ -1255,15 +1252,7 @@ breakpoint_t* brkfind_by_id (unsigned int id)
 
 
 
-void monitor_set_debug(BOOLEAN status)
-{
-	debug_st = status;
-}
 
-BOOLEAN monitor_get_debug_status (void)
-{
-	return debug_st;
-}
 
 
 /* Disassemble the current instruction.  Returns the number of bytes that
@@ -1530,9 +1519,10 @@ int monitor_load_map_file (const char *name)
 int load_bin(FILE *fp)
 {
     unsigned int addr = 0;
-    int byte;
+    INT8 byte;
     while ((byte = fgetc(fp)) != EOF)
     {
+        //printf("Loading byte %02X to address %04X\n", (UINT8)byte, addr);
         bus_write8(addr++, (UINT8)byte);
     }
     fclose(fp);
@@ -1683,7 +1673,6 @@ int monitor_load_image(const char *name)
     	printf("failed to open image file %s.\n", name);
     	return 1;
     }
-
   if (fscanf (fp, "S%1x%2x%4x", &type, &count, &addr) == 3)
     {
         rewind(fp);
@@ -1698,9 +1687,11 @@ int monitor_load_image(const char *name)
     }
   else
     {
-      	rewind(fp);
-        load_bin(fp);
-        monitor_load_map_file(name);
+        printf("File format not recognized as S19 or Intel HEX\n");
+        printf("No file loaded.\n");
+      	//rewind(fp);
+        //load_bin(fp);
+        //monitor_load_map_file(name);
     }
     return 0;
 }
@@ -1722,12 +1713,7 @@ const char* monitor_addr_name (target_addr_t target_addr)
    return buf;
 }
 
-static void monitor_signal (int sigtype)
-{
-   (void) sigtype;
-   putchar ('\n');
-   monitor_set_debug(ACTIVATED);
-}
+
 
 
 
@@ -1757,36 +1743,6 @@ void monitor_backtrace (void)
 	}
 }
 
-void breakpoint_hit (breakpoint_t *br)
-{
-   /* TODO don't know how best to handle errors here. */
-   char eflag = 0; /* unused */
-   if (br->threaded && (thread_id != br->tid))
-      return;
-/*
-   if (br->conditional)
-   {
-      if (eval (br->condition, &eflag) == 0)
-         return;
-   }
-         */
-
-   if (br->ignore_count)
-   {
-      --br->ignore_count;
-      return;
-   }
-
-   if(br->keep_running == 0)
-	{
-		monitor_set_debug(ACTIVATED);
-	}
-	else
-	{
-		monitor_set_debug(DEACTIVATED);	
-	}
-}
-
 void command_trace_insn (target_addr_t addr)
 {
    trace_buffer[trace_offset++] = addr;
@@ -1801,7 +1757,6 @@ void command_trace_insn (target_addr_t addr)
 void monitor_init (void)
 {
   sym_init ();  
-
 }
 
 
@@ -1813,6 +1768,7 @@ int monitor_run ()
 {
   int cycles = 0;
   cycles = m6809_execute(1);
+  return cycles;
 }
 /*
   do
@@ -1832,7 +1788,7 @@ int monitor_run ()
 
 	int rc;
 	rc = 0;
-	signal (SIGINT, monitor_signal);
+	
 	rc = command_loop ();
   monitor_set_debug(FALSE);
 	return rc;

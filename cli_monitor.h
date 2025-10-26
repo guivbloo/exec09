@@ -3,6 +3,6 @@
 
 
 void cli_monitor_init();
-void cli_monitor_run();
+int cli_monitor_run();
 
 #endif

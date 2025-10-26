@@ -16,6 +16,8 @@ helloworld: helloworld.S
 	$(AS) -o $@.s19 $< $(S19FLAGS)
 	$(AS) -o $@.hex $< $(HEXFLAGS)
 	srec_cat $@.hex -intel -offset - 0xE000 -o $@.bin -binary
+# srec_cat $@.hex -intel -o $@.bin -binary
+
 
 clean:
 	rm -rf *.o *.lst *.map *.s19 *.hex *.bin

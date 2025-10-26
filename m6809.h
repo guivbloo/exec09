@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-
+extern void (*m6809_insn_hook)(void);
 
 int m6809_execute (int);
 void m6809_reset (void);

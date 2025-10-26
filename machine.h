@@ -70,7 +70,7 @@ typedef struct
 	unsigned long cycles_per_sec;
 } machine_t;
 
-void machine_init (const char *machine_name);
+int machine_init (const char *machine_name);
 void machine_fault (unsigned int addr, unsigned char type);
 void machine_dump(void);
 void machine_describe (void);

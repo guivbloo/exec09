@@ -359,7 +359,7 @@ int machine_match (const char *machine_name, machine_t *m)
 
 
 
-void machine_init (const char *machine_name)
+int machine_init (const char *machine_name)
 {
 	//extern struct machine simple_machine;
 	extern machine_t bloo_machine;
@@ -395,13 +395,16 @@ void machine_init (const char *machine_name)
 	//else if (machine_match (machine_name, boot_rom_file, &eon2_machine));
 	//else if (machine_match (machine_name, boot_rom_file, &smii_machine));
 	//else if (machine_match (machine_name, boot_rom_file, &kipper1_machine));
-	else exit (1);
-
+	else 
+	{
+		printf ("Machine '%s' not recognized.\n", machine_name);
+		return (-1);
+	}
 	/* Save the default busmap configuration, before the
 	CPU begins to run, so that it can be restored if
 	necessary. */
 	memcpy (default_busmaps, busmaps, sizeof (busmaps));
-
+	return 0;
 	/* This should not be here */
 	//if (!strcmp (machine_name, "eon"))
 	//	mmu_reset_complete (mmu_device);

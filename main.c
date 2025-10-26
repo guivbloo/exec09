@@ -30,9 +30,8 @@ struct option
 } 
 
 option_table[] = {
-	{ 'h', "help", NULL,
+	{ 'h', "help", "Show this help message",
 		FALSE, FALSE, FALSE, do_help, NULL, NULL},
-	{ 't', "loadmap", "" },
 	{ 's', "machine", "Specify the machine (exact hardware) to emulate",
 		FALSE, TRUE, FALSE, NULL, NULL, sim_set_machine_name},
 	{ '\0', NULL },
@@ -179,22 +178,27 @@ next_arg:
 
 int main (int argc, char *argv[])
 {
-
+	int rc = 0;
 	parse_args (argc, argv);
-					printf("Starting CLI monitor...\n");
-
-	sim_init(program_name);
+	cli_monitor_init();
+	rc = sim_init(program_name);
+	if (rc != 0)
+	{
+		sim_exit (rc);
+	}
 	//if (use_gui)
 		//gui_monitor_run();
 
 	//else
 	//{
 
-		cli_monitor_init();
-		cli_monitor_run();
-	//}
-		
-	//sim_run();
+do
+	{
+		rc = cli_monitor_run();
+		if(rc == 0)
+			sim_run();
+	}
+	while(rc == 0);
 	sim_exit (0);
 	return (0);
 }

@@ -69,7 +69,10 @@ void bus_write8 (unsigned int addr, uint8_t val)
         /* silently ignore the write */
     }
     /* do this regardless (may trigger watchpoint) */
-     bus_write_hook (absolute_from_reladdr (map->devid, phy_addr), val);
+    if(bus_write_hook)
+    {
+        bus_write_hook (absolute_from_reladdr (map->devid, phy_addr), val);
+    }
 }
 
 void bus_write8_abs (absolute_address_t addr, uint8_t val)
