@@ -558,7 +558,6 @@ int command_exec_file (const char *filename)
    return 1;
 }
 
-/
 /**
  * Handles the "set" command, which allows the user to either set an internal variable
  * or write to memory. If the argument is "var", it creates or updates an entry in the

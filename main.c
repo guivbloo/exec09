@@ -12,8 +12,9 @@
 
 
 int do_help (const char *arg __attribute__((unused)));
+void set_use_gui(BOOLEAN val);
 char *program_name = NULL;
-int use_gui = 0;
+int use_gui = FALSE;
 
 
 struct option
@@ -34,9 +35,15 @@ option_table[] = {
 		FALSE, FALSE, FALSE, do_help, NULL, NULL},
 	{ 's', "machine", "Specify the machine (exact hardware) to emulate",
 		FALSE, TRUE, FALSE, NULL, NULL, sim_set_machine_name},
+	{ 'g', "gui", "Use the GUI monitor",
+		TRUE, FALSE, TRUE, NULL, set_use_gui, NULL},
 	{ '\0', NULL },
 };
 
+void set_use_gui(BOOLEAN val)
+{
+	use_gui = val;
+}
 
 int do_help (const char *arg __attribute__((unused)))
 {
@@ -180,25 +187,36 @@ int main (int argc, char *argv[])
 {
 	int rc = 0;
 	parse_args (argc, argv);
-	cli_monitor_init();
-	rc = sim_init(program_name);
+	if(use_gui == FALSE)
+	{
+		cli_monitor_init();
+	}
+	else
+	{
+		gui_monitor_init();
+	}
+	//rc = sim_init(program_name);
 	if (rc != 0)
 	{
 		sim_exit (rc);
 	}
-	//if (use_gui)
-		//gui_monitor_run();
 
-	//else
-	//{
-
-do
+	if(use_gui == FALSE)
 	{
-		rc = cli_monitor_run();
-		if(rc == 0)
-			sim_run();
+		do
+		{
+			rc = cli_monitor_run();
+			if(rc == 0)
+				sim_run();
+		}
+		while(rc == 0);
 	}
-	while(rc == 0);
+	else
+	{
+		gui_monitor_run();
+	}
+
+
 	sim_exit (0);
 	return (0);
 }
