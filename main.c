@@ -195,7 +195,7 @@ int main (int argc, char *argv[])
 	{
 		gui_monitor_init();
 	}
-	//rc = sim_init(program_name);
+	rc = sim_init(program_name);
 	if (rc != 0)
 	{
 		sim_exit (rc);
