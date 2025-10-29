@@ -1,3 +1,10 @@
+Dans le GUI debug affichage des dernieres instructions exécutées
+The green line is the next instruction to be executed. The current breakpoint address is visualized with a blue-ish line (not shown in the screenshot).
+(S)TEP (N)EXT (C)ONTINUE
+
+
+
+
 Main
 	simulator
 		Machine

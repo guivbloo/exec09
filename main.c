@@ -50,7 +50,7 @@ int do_help (const char *arg __attribute__((unused)))
 	struct option *opt = option_table;
 
 	printf ("EXEC09: Motorola 6809 Simulator\n");
-	printf ("m6809-run [options] [program]\n\n");
+	printf ("EXEC09 [options] [program]\n\n");
 	printf ("Options:\n");
 	while (opt->o_long != NULL)
 	{

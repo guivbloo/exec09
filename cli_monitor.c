@@ -17,10 +17,8 @@
 #define MAXLINE 256
 #define MAX_THREADS 64
 #define MAX_CMD_QUEUES 8
-#define IRQ_CYCLE_COUNTS 128
-#define PROMPT "(dbg) "
-#define SYM_AUTO 1
 
+#define PROMPT "(dbg) "
 #define MAX_HISTORY 10
 
 
@@ -84,9 +82,7 @@ int exit_command = 1;
 BOOLEAN display_debug = TRUE;
 
 
-unsigned int irq_cycle_tab[IRQ_CYCLE_COUNTS] = { 0, };
-unsigned int irq_cycle_entry = 0;
-unsigned long irq_cycles = 0;
+
 
 unsigned int display_count = 0;
 display_t displaytab[MAX_DISPLAYS];
@@ -1180,93 +1176,6 @@ void command_periodic ( unsigned long nb_cycles_executed)
    }
 }
 
-void pc_virtual (unsigned long *val, int writep) {
-   if (writep) m6809_set_pc (*val);
-   else *val = m6809_get_pc ();
-}
-void x_virtual (unsigned long *val, int writep) {
-   if (writep) m6809_set_x (*val);
-   else *val = m6809_get_x ();
-}
-void y_virtual (unsigned long *val, int writep) {
-   if (writep)
-      m6809_set_y (*val);
-   else *val = m6809_get_y ();
-}
-void u_virtual (unsigned long *val, int writep) {
-   if (writep)
-      m6809_set_u (*val);
-   else
-      *val = m6809_get_u ();
-}
-void s_virtual (unsigned long *val, int writep) {
-   if (writep)
-      m6809_set_s (*val);
-   else
-      *val = m6809_get_s ();
-}
-void d_virtual (unsigned long *val, int writep) {
-   if (writep)
-      m6809_set_d (*val);
-   else
-      *val = m6809_get_d ();
-}
-void a_virtual (unsigned long *val, int writep) {
-   if (writep)
-      m6809_set_a (*val);
-   else
-      *val = m6809_get_a ();
-}
-void b_virtual (unsigned long *val, int writep) {
-   if (writep)
-      m6809_set_b (*val);
-   else
-      *val = m6809_get_b ();
-}
-void dp_virtual (unsigned long *val, int writep) {
-   if (writep)
-      m6809_set_dp (*val);
-   else
-      *val = m6809_get_dp ();
-}
-void cc_virtual (unsigned long *val, int writep) {
-   if (writep)
-      m6809_set_cc (*val);
-   else
-      *val = m6809_get_cc ();
-}
-void irq_load_virtual (unsigned long *val, int writep) {
-   if (!writep)
-      *val = irq_cycles / IRQ_CYCLE_COUNTS;
-}
-
-void cycles_virtual (unsigned long *val, int writep)
-{
-   if (!writep)
-      *val = m6809_get_cycles ();
-}
-
-void et_virtual (unsigned long *val, int writep)
-{
-   static unsigned long last_cycles = 0;
-   if (!writep)
-      *val = m6809_get_cycles () - last_cycles;
-   last_cycles = m6809_get_cycles ();
-}
-
-/**
- * Update the $irqload virtual register, which tracks the
- * average number of cycles spent in IRQ.  This function
- * maintains a rolling history of IRQ_CYCLE_COUNTS entries.
- */
-void command_exit_irq_hook (unsigned long cycles)
-{
-   irq_cycles -= irq_cycle_tab[irq_cycle_entry];
-   irq_cycles += cycles;
-   irq_cycle_tab[irq_cycle_entry] = cycles;
-   irq_cycle_entry = (irq_cycle_entry + 1) % IRQ_CYCLE_COUNTS;
-}
-
 
 
 BOOLEAN command_get_exitcmd(void)
@@ -1555,23 +1464,7 @@ int command_loop (void)
 void cli_monitor_init (void)
 {
    monitor_init();
-   /* Install virtual registers.  These are referenced in expressions
-    * using a dollar-sign prefix (e.g. $pc).  The value of the
-    * symbol is a pointer to a function (e.g. pc_virtual) which
-    * computes the value dynamically. */
-   sym_add (AUTO_SYMTAB_T, "pc", (unsigned long)pc_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "x", (unsigned long)x_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "y", (unsigned long)y_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "u", (unsigned long)u_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "s", (unsigned long)s_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "d", (unsigned long)d_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "a", (unsigned long)a_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "b", (unsigned long)b_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "dp", (unsigned long)dp_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "cc", (unsigned long)cc_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "cycles", (unsigned long)cycles_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "et", (unsigned long)et_virtual, SYM_AUTO);
-   sym_add (AUTO_SYMTAB_T, "irqload", (unsigned long)irq_load_virtual, SYM_AUTO);
+
    
    examine_type.format = 'X'; /* hex with upper-case A-F */
    examine_type.size = 1;

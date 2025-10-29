@@ -5,6 +5,8 @@
 
 
 #define MAX_SYMBOL_HASH 1009
+#define SYM_AUTO 1
+
 
 typedef struct
 {

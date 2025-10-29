@@ -17,7 +17,6 @@ LD=gcc
 
 HDRS=$(wildcard *.h)
 OBJS=$(subst .c,.o,$(SRCS))
-LIBS= ../dcimgui/build/libimgui.a
 
 .c.o: $(HDRS)
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -32,7 +31,7 @@ info:
 	@echo Objects $(OBJS)
 
 m6809-run: $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+	$(LD) $(LDFLAGS) -o $@ $(OBJS)
 
 
 clean:

@@ -6,6 +6,7 @@
 
 #define MAX_BREAKS 32
 #define MAX_TRACE 256
+#define IRQ_CYCLE_COUNTS 128
 
 #define MAKE_ADDR(devno, phyaddr) ((devno * 0x10000000L) + phyaddr)
 
