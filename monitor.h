@@ -106,6 +106,7 @@ unsigned long eval(char *expr, char *eflag);
 unsigned long eval_mem (char *expr, eval_mode_t mode, char *eflag);
 int monitor_load_map_file (const char *name);
 int monitor_load_image (const char *name);
-
+void monitor_display_pc_content (char *buf);
+void monitor_display_insn (absolute_address_t addr, char *retbuf);
 
 #endif

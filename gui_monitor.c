@@ -11,6 +11,10 @@
 #include "machine.h"
 #include "bus_access.h"
 #include "m6809.h"
+#include "simulator.h"
+#include "gui_memory_editor.h"
+
+#define MAX_HISTORY_DISPLAY 9
 
 typedef struct {
     uint64_t last_time;
@@ -19,6 +23,12 @@ typedef struct {
     sg_pass_action pass_action;
 } state_t;
 static state_t state;
+
+BOOLEAN refresh = TRUE;
+
+
+extern unsigned int trace_offset;
+extern target_addr_t trace_buffer[MAX_TRACE];
 
 void gui_read_hook (absolute_address_t addr)
 {
@@ -30,7 +40,9 @@ void gui_write_hook (absolute_address_t addr, uint8_t val)
 }
 void gui_insn_hook (void)
 {
-    return;
+   target_addr_t pc;
+   pc = m6809_get_pc ();
+   command_trace_insn (pc);
 }
 
 void SetVSCodeTheme(void)
@@ -159,6 +171,7 @@ static void frame(void) {
         .dpi_scale = sapp_dpi_scale()
     });
 
+
     // 1. Show a simple window
     // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
     static float f = 0.0f;
@@ -231,13 +244,20 @@ static void frame(void) {
     igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
     igInputText("##", str0, IM_ARRAYSIZE(str0),0);igSameLine();
     igText(" CC:"); igSameLine();
-    igText("NZVCIHFE");
+    igTextDisabled("NZVC");igSameLine();
+    igTextColored(color_active, "IHFE");
     igSeparator();
     igAlignTextToFramePadding();
     igSetNextItemWidth(60.0f); 
     igButton("Next") ; igSameLine();
     igSetNextItemWidth(60.0f); 
     igButton("Step"); igSameLine();
+    if (igIsItemClicked())
+    {
+        // Action à effectuer lorsque le bouton est cliqué
+        sim_run();
+        refresh = TRUE;
+    }
     igSetNextItemWidth(60.0f); 
     igButton("Continue");igSameLine();
     igSetNextItemWidth(120.0f);
@@ -249,7 +269,8 @@ static void frame(void) {
     igBeginTableEx("table1", 2, table_flags, (ImVec2){0.0f, 200.0f}, 0.0f);
     igTableSetupColumn("AAA", ImGuiTableColumnFlags_WidthFixed);
     igTableSetupColumn("Instruction", ImGuiTableColumnFlags_WidthStretch);
-    for (int row = 0; row < 30; row++) {
+    unsigned int off = (trace_offset + 1 - MAX_HISTORY_DISPLAY) % MAX_TRACE;
+    for (int row = 0; row < MAX_HISTORY_DISPLAY + 10; row++) {
         igTableNextRowEx(ImGuiTableRowFlags_None, 0.0f);
         for (int column = 0; column < 2; column++) {
             igTableSetColumnIndex(column);
@@ -257,28 +278,46 @@ static void frame(void) {
                 igSmallButton("B");
             else 
             {
-                if(row < 7)
+                if (row < MAX_HISTORY_DISPLAY - 1)
                 {
-                    igTextDisabled("00:0x%04X:  %04X    NOP", row * 3 + column, 0x12);
+                    char buf[256];
+                    target_addr_t pc = trace_buffer[off];
+                    absolute_address_t addr = to_absolute (pc);
+                    monitor_display_insn (addr, buf);
+                    igTextDisabled("%s", buf); 
+                    off = (off + 1) % MAX_TRACE;
                 }
-                else if(row == 7)
+                else if (row == MAX_HISTORY_DISPLAY - 1)
                 {
-                    igTextColored(color_active, "00:0x%04X:  %04X    STAA $2000", row * 3 + column, 0xB7);
+                    char buf[256];
+                    monitor_display_pc_content(buf);
+                    igTextColored(color_active, "%s", buf);
                 }
                 else
                 {
-                    igText("00:0x%04X:  %04X    NEG <$0000", row * 3 + column, 0x00);
-                }
+                    absolute_address_t ad = to_absolute(m6809_get_pc());
+                    char buf[64];
+                    char buff[128];
+                    int size = 0;
+                    for(int i=0;i<row - (MAX_HISTORY_DISPLAY -1); i++)
+                    {
+                        size += dasm(buf, ad + size);
+                    }   
+                    monitor_display_insn (ad+size, buff);
+                    igText("%s", buff);
+                }   
             }
         }
     }
     igEndTable();
-
-    
     igText("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / igGetIO()->Framerate, igGetIO()->Framerate);
     igEnd();
-    //igPopStyleColor();  
-
+    //igPopStyleColor(); 
+    
+    //Memory editor
+    ImVec2 pos2 = { 1.0f, 400.0f };  // position en pixels
+    igSetNextWindowPos(pos2, ImGuiCond_Once);
+    gui_memory_editor();
 
     // 2. Show another simple window, this time using an explicit Begin/End pair
     if (state.show_another_window) {
@@ -299,6 +338,7 @@ static void frame(void) {
     simgui_render();
     sg_end_pass();
     sg_commit();
+    refresh = FALSE;
 }
 
 static void cleanup(void) {
@@ -314,8 +354,8 @@ void gui_monitor_init()
 {
     monitor_init();
     bus_read_hook = gui_read_hook;
-   bus_write_hook = gui_write_hook;
-   m6809_insn_hook = gui_insn_hook;
+    bus_write_hook = gui_write_hook;
+    m6809_insn_hook = gui_insn_hook;
 }
 
 void gui_monitor_run()

@@ -1825,9 +1825,37 @@ void et_virtual (unsigned long *val, int writep)
    last_cycles = m6809_get_cycles ();
 }
 
+void monitor_display_insn (absolute_address_t addr, char *retbuf)
+{
+   char buf[64];
+   int i;
+   int size = dasm(buf, addr);
 
+   const char* name;
+   sprintf(retbuf, "0x%04lX ", addr & 0xFFFFFF);
 
+   for (i = 0; i < size; i++)
+      sprintf(retbuf + strlen(retbuf), "%02X", bus_read8_abs(addr + i));
 
+   for (i = 0; i < 4 - size; i++)
+      sprintf(retbuf + strlen(retbuf), "  ");
+
+   name = sym_lookup(PROGRAM_SYMTAB_T, addr);
+   if (name)
+      sprintf(retbuf + strlen(retbuf), "  %-12.12s", name);
+   else
+      sprintf(retbuf + strlen(retbuf), "%-14.14s", "");
+
+   sprintf(retbuf + strlen(retbuf), "%s", buf);
+   //return size;
+   return;
+}
+
+void monitor_display_pc_content (char *buf)
+{
+  absolute_address_t ad = to_absolute(m6809_get_pc());
+  monitor_display_insn (ad, buf);
+}
 
 void monitor_init (void)
 {
@@ -1862,27 +1890,5 @@ int monitor_run ()
   cycles = m6809_execute(1);
   return cycles;
 }
-/*
-  do
-  {
-    //Check for breakpoints
-    command_insn_hook ();
-    if (dump_every_insn)
-		  print_current_insn ();
-    if (check_break () != 0)
-			monitor_set_debug(TRUE);
-		if (monitor_get_debug_status() != FALSE)
-			if (monitor6809 () != 0)
-				goto cpu_exit;
 
-  } while (condition);
-  
 
-	int rc;
-	rc = 0;
-	
-	rc = command_loop ();
-  monitor_set_debug(FALSE);
-	return rc;
-}
-  */
