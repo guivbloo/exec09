@@ -11,6 +11,7 @@
 #include "machine_bloo.h"
 #include "cimgui.h"
 #include "gui_memory_editor.h"
+#include "gui_debugger.h"
 
 
 
@@ -56,7 +57,10 @@
 
 void bloo_display()
 {
-	ImVec2 pos = { 1.0f, 400.0f };  // position en pixels
+	ImVec2 pos = { 1.0f, 1.0f };  // position en pixels
+	gui_debugger(pos);
+	
+	pos = (ImVec2){ 1.0f, 400.0f };  // position en pixels
     gui_memory_editor(pos);
 
 	pos= (ImVec2){460,20};
