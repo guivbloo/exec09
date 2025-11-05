@@ -9,6 +9,8 @@
 #include "device_ram.h"
 #include "device_rom.h"
 #include "machine_bloo.h"
+#include "cimgui.h"
+#include "gui_memory_editor.h"
 
 
 
@@ -22,15 +24,13 @@
  * 8KByte of ROM at $E000
  ********************************************************************/
 
-
+ struct hw_device *uart;
+ struct hw_device *ptm;
+ struct hw_device *rom;
+ struct hw_device *ram;
  
  void bloo_init ()
 {
-   	struct hw_device *uart;
-	struct hw_device *ptm;
-	struct hw_device *rom;
-	struct hw_device *ram;
-
     /* 48K RAM from 0000 to BFFF */
     ram = ram_create(BLOO_RAM_SIZE);
 	machine_attach_device(ram);
@@ -54,6 +54,20 @@
     machine_map_device (rom , 0, BLOO_ROM_BASE, BLOO_ROM_SIZE, MAP_READWRITE);
 }
 
+void bloo_display()
+{
+	ImVec2 pos = { 1.0f, 400.0f };  // position en pixels
+    gui_memory_editor(pos);
+
+	pos= (ImVec2){460,20};
+	m6850_display(uart, pos);
+
+
+	// Demo 
+	//igSetNextWindowPos((ImVec2){460,20}, ImGuiCond_FirstUseEver);
+	//igShowDemoWindow(0);
+}
+
 
  
 machine_t bloo_machine =
@@ -64,4 +78,5 @@ machine_t bloo_machine =
 	.dump = NULL,
 	.irq = NULL,
 	.firq = NULL,
+	.display = bloo_display,
 };

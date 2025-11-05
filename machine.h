@@ -67,6 +67,7 @@ typedef struct
 	void (*update) (void);
 	uint8_t (*irq) (void);
 	uint8_t (*firq) (void);
+	void (*display) (void);
 	unsigned long cycles_per_sec;
 } machine_t;
 
@@ -86,7 +87,7 @@ void machine_attach_firq (struct hw_device *dev);
 unsigned long machine_get_cycles (void);
 struct bus_map *machine_find_map (unsigned int addr);
 struct hw_device *machine_find_device (unsigned int addr, unsigned char id);
-
+void machine_display(void);
 
 
 

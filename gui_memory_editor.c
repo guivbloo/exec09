@@ -20,13 +20,11 @@ char str1[20] = "0100";
 uint16_t start_address = 0x0000;
 uint16_t length = 0x0100;
 
-void gui_memory_editor()
+void gui_memory_editor(ImVec2 pos)
 {
-    static int value_hex = 0x1234;    // Valeur actuelle
-    static char input_buf[16] = "";   // Buffer texte temporaire
+    igSetNextWindowPos(pos, ImGuiCond_Once);
     char str[20];
     char str2[20];
-    char str3[20];
     ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoMove;
@@ -51,11 +49,10 @@ void gui_memory_editor()
             {
                 uint16_t addr = start_address + row * 16 + column - 1;
                 uint8_t val = bus_read8(addr);
-                sprintf(str, "%02X##%04X", val, addr);
+                sprintf(str, "%02X##%d-%d", val, row, column);
                 str2[column -1] = (val >= 32 && val <= 126) ? (char)val : '.';
                 str2[column -1 +1] = '\0';
                 ImGuiPopupFlags popup_flags = ImGuiPopupFlags_None;
-                sprintf(str3, "Cell_%04X", addr);
                 if(igSelectable(str))
                 {
                     igOpenPopup(str, popup_flags);
@@ -76,7 +73,7 @@ void gui_memory_editor()
                     }
                     if (igSelectable("Edit Value"))
                     {
-                        printf("Editing value at %04X\n", to_absolute(addr));
+                       printf("Editing value at %04X\n", to_absolute(addr));
                     }
                     igEndPopup();
                 }
