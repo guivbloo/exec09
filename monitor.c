@@ -1825,7 +1825,7 @@ void et_virtual (unsigned long *val, int writep)
    last_cycles = m6809_get_cycles ();
 }
 
-void monitor_display_insn (absolute_address_t addr, char *retbuf)
+int monitor_display_insn (absolute_address_t addr, char *retbuf)
 {
    char buf[64];
    int i;
@@ -1847,8 +1847,7 @@ void monitor_display_insn (absolute_address_t addr, char *retbuf)
       sprintf(retbuf + strlen(retbuf), "%-14.14s", "");
 
    sprintf(retbuf + strlen(retbuf), "%s", buf);
-   //return size;
-   return;
+   return size;
 }
 
 void monitor_display_pc_content (char *buf)

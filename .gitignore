@@ -128,3 +128,5 @@ build/CMakeFiles/sokol.dir/sokol/sokol.c.o
 build/CMakeFiles/sokol.dir/sokol/sokol.c.o.d
 build/CMakeFiles/exec09.dir/gui_memory_editor.c.o
 build/CMakeFiles/exec09.dir/gui_memory_editor.c.o.d
+build/CMakeFiles/exec09.dir/gui_disassembler.c.o
+build/CMakeFiles/exec09.dir/gui_disassembler.c.o.d

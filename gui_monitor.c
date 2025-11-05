@@ -13,6 +13,8 @@
 #include "m6809.h"
 #include "simulator.h"
 #include "gui_memory_editor.h"
+#include "gui_disassembler.h"
+
 
 #define MAX_HISTORY_DISPLAY 9
 
@@ -315,9 +317,14 @@ static void frame(void) {
     //igPopStyleColor(); 
     
     //Memory editor
-    ImVec2 pos2 = { 1.0f, 400.0f };  // position en pixels
+    ImVec2 pos2 = { 1.0f, 350.0f };  // position en pixels
     igSetNextWindowPos(pos2, ImGuiCond_Once);
-    gui_memory_editor();
+    //gui_memory_editor();
+
+    //Disassembler
+    //ImVec2 pos3 = { 1.0f, 600.0f };  // position en pixels
+    //igSetNextWindowPos(pos3, ImGuiCond_Once);
+    gui_disassembler();
 
     // 2. Show another simple window, this time using an explicit Begin/End pair
     if (state.show_another_window) {
