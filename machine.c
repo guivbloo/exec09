@@ -189,6 +189,14 @@ void machine_check_irq(void)
 	}
 }
 
+void machine_display(void)
+{
+	if (machine->display) 
+	{
+		machine->display();
+	}
+}
+
 void machine_check_firq(void)
 {
 	int i;

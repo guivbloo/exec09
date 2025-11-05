@@ -20,9 +20,9 @@ char str1[20] = "0100";
 uint16_t start_address = 0x0000;
 uint16_t length = 0x0100;
 
-void gui_memory_editor()
+void gui_memory_editor(ImVec2 pos)
 {
-    
+    igSetNextWindowPos(pos, ImGuiCond_Once);
     char str[20];
     char str2[20];
     ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;

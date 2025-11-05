@@ -9,7 +9,7 @@ uint8_t m6850_getchar();
 void m6850_putchar(uint8_t val);
 uint8_t m6850_kbhit();
 uint8_t m6850_putready();
-
+void m6850_display(struct hw_device *dev, ImVec2 pos);
 
 
 

@@ -10,6 +10,8 @@
 #include "types.h"
 #include "device.h"
 #include "device_m6850.h"
+#include "cimgui.h"
+
 
 #define BUFFER_SIZE 1
 
@@ -138,6 +140,40 @@ uint8_t m6850_irq_pending(struct hw_device *dev)
     struct m6850_port *port = (struct m6850_port *)dev->priv;
     return port->status & 0x80;
 }
+
+
+void m6850_display(struct hw_device *dev, ImVec2 pos)
+{
+  struct m6850_port *port = (struct m6850_port *)dev->priv;
+  ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove;
+  igBegin("ACIA M6850", NULL, flags); //Création de la fenêtre
+  igText("Registres :");
+  igSeparator();
+  igText("Control Register (CR): 0x%02X", port->ctrl);
+  igText("Status Register (SR): 0x%02X", port->status);
+  igText("Receive Data Register (RDR): 0x%02X", port->RDR);
+  igText("Transmit Data Register (TDR): 0x%02X", port->TDR);
+  igSeparator();
+  igText("Control Register Bits (LEDs):");
+  igSeparator();
+  bool bit7 = (port->ctrl & 0x80) != 0;
+  bool bit6 = (port->ctrl & 0x40) != 0;
+  bool bit5 = (port->ctrl & 0x20) != 0;
+  bool bit4 = (port->ctrl & 0x10) != 0;
+  bool bit3 = (port->ctrl & 0x08) != 0;
+  bool bit2 = (port->ctrl & 0x04) != 0;
+  bool bit1_0 = (port->ctrl & 0x03) == 0x03;
+
+  igCheckbox("Bit 7 (Receive Interrupt Enable)", &bit7);
+  igCheckbox("Bit 6 (Transmit Interrupt Enable)", &bit6);
+  igCheckbox("Bit 5 (Parity Enable)", &bit5);
+  igCheckbox("Bit 4 (Even Parity Select)", &bit4);
+  igCheckbox("Bit 3 (Word Length Select)", &bit3);
+  igCheckbox("Bit 2 (Stop Bits Select)", &bit2);
+  igCheckbox("Bit 1-0 (Master Reset)", &bit1_0);
+  igEnd();
+}
+
 
 struct hw_class m6850_class =
   {

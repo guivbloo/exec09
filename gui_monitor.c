@@ -315,23 +315,9 @@ static void frame(void) {
     //igPopStyleColor(); 
     
     //Memory editor
-    ImVec2 pos2 = { 1.0f, 400.0f };  // position en pixels
-    igSetNextWindowPos(pos2, ImGuiCond_Once);
-    gui_memory_editor();
+    machine_display();
 
-    // 2. Show another simple window, this time using an explicit Begin/End pair
-    if (state.show_another_window) {
-        igSetNextWindowSize((ImVec2){200,100}, ImGuiCond_FirstUseEver);
-        igBegin("Another Window", &state.show_another_window, 0);
-        igText("Hello");
-        igEnd();
-    }
 
-    // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowDemoWindow()
-    if (state.show_test_window) {
-        igSetNextWindowPos((ImVec2){460,20}, ImGuiCond_FirstUseEver);
-        igShowDemoWindow(0);
-    }
 
     // the sokol_gfx draw pass
     sg_begin_pass(&(sg_pass){ .action = state.pass_action, .swapchain = sglue_swapchain() });
