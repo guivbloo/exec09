@@ -130,3 +130,5 @@ build/CMakeFiles/exec09.dir/gui_memory_editor.c.o
 build/CMakeFiles/exec09.dir/gui_memory_editor.c.o.d
 build/CMakeFiles/exec09.dir/gui_disassembler.c.o
 build/CMakeFiles/exec09.dir/gui_disassembler.c.o.d
+build/CMakeFiles/exec09.dir/gui_debugger.c.o
+build/CMakeFiles/exec09.dir/gui_debugger.c.o.d
