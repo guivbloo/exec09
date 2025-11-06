@@ -1,6 +1,7 @@
 #ifndef DEVICE_M6850_H
 #define DEVICE_M6850_H
 
+#include "cimgui.h"
 struct hw_device* m6850_create (unsigned long size);
 
 /* User functions */

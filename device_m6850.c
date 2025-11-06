@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 #include "types.h"
 #include "device.h"
 #include "device_m6850.h"
@@ -27,6 +28,15 @@ uint8_t buffer_put[BUFFER_SIZE];
 uint8_t buffer_get[BUFFER_SIZE];
 uint8_t index_put = 0;
 uint8_t index_get = 0;
+
+// Communication log
+char comm_log[256][128];
+int log_count;
+
+// Auto-envoi firmware
+bool auto_send_enabled;
+char trigger_char;
+char firmware_path[256];
 
 
 
@@ -145,33 +155,69 @@ uint8_t m6850_irq_pending(struct hw_device *dev)
 void m6850_display(struct hw_device *dev, ImVec2 pos)
 {
   struct m6850_port *port = (struct m6850_port *)dev->priv;
+  igSetNextWindowPos(pos, ImGuiCond_Once);
   ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove;
-  igBegin("ACIA M6850", NULL, flags); //Création de la fenêtre
-  igText("Registres :");
-  igSeparator();
-  igText("Control Register (CR): 0x%02X", port->ctrl);
-  igText("Status Register (SR): 0x%02X", port->status);
-  igText("Receive Data Register (RDR): 0x%02X", port->RDR);
-  igText("Transmit Data Register (TDR): 0x%02X", port->TDR);
-  igSeparator();
-  igText("Control Register Bits (LEDs):");
-  igSeparator();
-  bool bit7 = (port->ctrl & 0x80) != 0;
-  bool bit6 = (port->ctrl & 0x40) != 0;
-  bool bit5 = (port->ctrl & 0x20) != 0;
-  bool bit4 = (port->ctrl & 0x10) != 0;
-  bool bit3 = (port->ctrl & 0x08) != 0;
-  bool bit2 = (port->ctrl & 0x04) != 0;
-  bool bit1_0 = (port->ctrl & 0x03) == 0x03;
+    if (igBegin("ACIA 6850", NULL, flags))
+    {
+        igText("Registers:");
+        igSeparator();
+        igText("Control (CR): 0x%02X", port->ctrl);
+        igText("Status  (SR): 0x%02X", port->status);
+        igText("TX Data (TDR): 0x%02X", port->TDR);
+        igText("RX Data (RDR): 0x%02X ('%c')", port->RDR,
+               (port->RDR >= 32) ? port->RDR : '.');
 
-  igCheckbox("Bit 7 (Receive Interrupt Enable)", &bit7);
-  igCheckbox("Bit 6 (Transmit Interrupt Enable)", &bit6);
-  igCheckbox("Bit 5 (Parity Enable)", &bit5);
-  igCheckbox("Bit 4 (Even Parity Select)", &bit4);
-  igCheckbox("Bit 3 (Word Length Select)", &bit3);
-  igCheckbox("Bit 2 (Stop Bits Select)", &bit2);
-  igCheckbox("Bit 1-0 (Master Reset)", &bit1_0);
-  igEnd();
+        igSeparator();
+
+        // --- Envoi manuel d’un octet ---
+        static char tx_buf[8] = "0x00";
+        igInputText("Send Byte", tx_buf, sizeof(tx_buf), ImGuiInputTextFlags_CharsHexadecimal);
+        igSameLine();
+        if (igButton("Send")) {
+            int val = (int)strtol(tx_buf, NULL, 16);
+            m6850_putchar(val & 0xFF);
+        }
+
+        igSameLine();
+        if (igButton("Clear Log"))
+            log_count = 0;
+
+        igSeparator();
+
+        // --- Historique des communications ---
+        igText("Communication Log:");
+        igBeginChild("log_child", (ImVec2){420, 220}, true, ImGuiWindowFlags_HorizontalScrollbar);
+        for (int i = 0; i < log_count; i++) {
+            const char *line = comm_log[i];
+            if (strncmp(line, "TX", 2) == 0)
+                igTextColored((ImVec4){0.4f,0.7f,1.0f,1.0f}, "%s", line);
+            else if (strncmp(line, "RX", 2) == 0)
+                igTextColored((ImVec4){0.4f,1.0f,0.4f,1.0f}, "%s", line);
+            else if (strstr(line, "Error"))
+                igTextColored((ImVec4){1.0f,0.3f,0.3f,1.0f}, "%s", line);
+            else
+                igTextColored((ImVec4){1.0f,0.8f,0.3f,1.0f}, "%s", line);
+        }
+        igEndChild();
+
+        igSeparator();
+
+        // --- Auto-send Firmware ---
+        igText("Firmware Auto-Send:");
+        igCheckbox("Enable Auto-Send", &auto_send_enabled);
+
+        char trigger_buf[2] = {trigger_char, 0};
+        igInputText("Trigger Char", trigger_buf, sizeof(trigger_buf), ImGuiInputTextFlags_None);
+        if (trigger_buf[0]) trigger_char = trigger_buf[0];
+
+        igInputText("Firmware Path", firmware_path, sizeof(firmware_path), ImGuiInputTextFlags_None);
+
+        igSeparator();
+
+
+    }
+    igEnd();
+
 }
 
 

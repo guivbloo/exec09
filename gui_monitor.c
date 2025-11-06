@@ -12,9 +12,8 @@
 #include "bus_access.h"
 #include "m6809.h"
 #include "simulator.h"
-#include "gui_memory_editor.h"
 
-#define MAX_HISTORY_DISPLAY 9
+
 
 typedef struct {
     uint64_t last_time;
@@ -24,11 +23,7 @@ typedef struct {
 } state_t;
 static state_t state;
 
-BOOLEAN refresh = TRUE;
 
-
-extern unsigned int trace_offset;
-extern target_addr_t trace_buffer[MAX_TRACE];
 
 void gui_read_hook (absolute_address_t addr)
 {
@@ -162,8 +157,7 @@ static void init(void) {
 static void frame(void) {
     const int width = sapp_width();
     const int height = sapp_height();
-    ImVec4 color_active = {0.2f, 0.6f, 1.0f, 1.0f};  // bleu clair quand active
-    ImVec4 color_inactive = {0.0f, 0.0f, 0.0f, 1.0f}; // noir quand inactive
+
     simgui_new_frame(&(simgui_frame_desc_t){
         .width = width,
         .height = height,
@@ -171,21 +165,13 @@ static void frame(void) {
         .dpi_scale = sapp_dpi_scale()
     });
 
-
-    
-    //igPopStyleColor(); 
-    
-    //Memory editor
     machine_display();
-
-
 
     // the sokol_gfx draw pass
     sg_begin_pass(&(sg_pass){ .action = state.pass_action, .swapchain = sglue_swapchain() });
     simgui_render();
     sg_end_pass();
     sg_commit();
-    refresh = FALSE;
 }
 
 static void cleanup(void) {

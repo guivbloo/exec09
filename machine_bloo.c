@@ -12,6 +12,7 @@
 #include "cimgui.h"
 #include "gui_memory_editor.h"
 #include "gui_debugger.h"
+#include "gui_disassembler.h"
 
 
 
@@ -57,14 +58,13 @@
 
 void bloo_display()
 {
-	ImVec2 pos = { 1.0f, 1.0f };  // position en pixels
-	gui_debugger(pos);
+	gui_debugger((ImVec2){ 1.0f, 1.0f });
 	
-	pos = (ImVec2){ 1.0f, 400.0f };  // position en pixels
-    gui_memory_editor(pos);
+    gui_memory_editor((ImVec2){ 1.0f, 360.0f });
 
-	pos= (ImVec2){460,20};
-	m6850_display(uart, pos);
+	gui_disassembler((ImVec2){ 640.0f, 360.0f });
+
+	m6850_display(uart, (ImVec2){640.0f, 1.0f});
 
 
 	// Demo 

@@ -20,12 +20,14 @@
 uint16_t dis_start_address = 0xFF00;
 uint16_t dis_length = 0x0020;
 
-void gui_disassembler()
+void gui_disassembler(ImVec2 pos)
 {
     char str[20];
     char str0[20] = "FF00";
     char str1[20] = "0020";
-        ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
+
+    igSetNextWindowPos(pos, ImGuiCond_Once);
+    ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoMove;
     ImGuiTableFlags table_flags = ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_BordersOuterV;

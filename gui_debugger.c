@@ -1,7 +1,17 @@
 #include "cimgui.h"
+#include "gui_debugger.h"
+#include "monitor.h"
+#include "m6809.h"
+#include "simulator.h"
+#include "bus_access.h"
+
+#define MAX_HISTORY_DISPLAY 9
+
+BOOLEAN refresh = TRUE;
 
 
-
+extern unsigned int trace_offset;
+extern target_addr_t trace_buffer[MAX_TRACE];
 
 void gui_debugger(ImVec2 pos)
 {
@@ -10,7 +20,8 @@ void gui_debugger(ImVec2 pos)
     static float f = 0.0f;
     static char str0[7] = "0x0000";
     static char str1[5] = "0x00";
-
+    ImVec4 color_active = {0.2f, 0.6f, 1.0f, 1.0f};  // bleu clair quand active
+    ImVec4 color_inactive = {0.0f, 0.0f, 0.0f, 1.0f}; // noir quand inactive
     //Modification de l'apparence des fenêtres
     //ImGuiStyle* style = igGetStyle();
     //style->Colors[ImGuiCol_TitleBgActive] = (ImVec4){0.2f, 0.5f, 1.0f, 1.0f}; // bleu clair
