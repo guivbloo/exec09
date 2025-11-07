@@ -8,14 +8,7 @@
 #include "bus_access.h"
 
 
-#define E_FLAG 0x80
-#define F_FLAG 0x40
-#define H_FLAG 0x20
-#define I_FLAG 0x10
-#define N_FLAG 0x08
-#define Z_FLAG 0x04
-#define V_FLAG 0x02
-#define C_FLAG 0x01
+
 
 /* For cwai state machine */
 #define CWAI_STATE_IDLE     0

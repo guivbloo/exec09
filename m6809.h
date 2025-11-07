@@ -5,6 +5,15 @@
 
 extern void (*m6809_insn_hook)(void);
 
+#define E_FLAG 0x80
+#define F_FLAG 0x40
+#define H_FLAG 0x20
+#define I_FLAG 0x10
+#define N_FLAG 0x08
+#define Z_FLAG 0x04
+#define V_FLAG 0x02
+#define C_FLAG 0x01
+
 int m6809_execute (int);
 void m6809_reset (void);
 void m6809_print_regs (void);
