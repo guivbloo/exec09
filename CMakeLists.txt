@@ -8,6 +8,12 @@ if (CMAKE_SYSTEM_NAME STREQUAL Linux)
     find_package(Threads REQUIRED)
 endif()
 
+#=== LIBRARY: tinyfiledialogs
+add_library(tinyfiledialogs STATIC
+    tinyfiledialogs/tinyfiledialogs.c
+    tinyfiledialogs/tinyfiledialogs.h)
+target_include_directories(tinyfiledialogs INTERFACE tinyfiledialogs)
+
 #=== LIBRARY: cimgui + Dear ImGui
 add_library(cimgui STATIC
     cimgui/cimgui.cpp
@@ -45,12 +51,12 @@ endif()
 target_link_libraries(sokol PUBLIC cimgui)
 target_include_directories(sokol INTERFACE sokol)
 
-#=== EXECUTABLE: demo
+#=== EXECUTABLE: exec09
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
     add_executable(exec09 WIN32 m6809.c 
 	device_rom.c device_ram.c
 	device_m6850.c device_m6840.c device.c 
-	monitor.c bus_access.c 
+	monitor.c bus_access.c
 	symtab.c  simulator.c cli_monitor.c main.c
 	machine.c machine_bloo.c gui_monitor.c  gui_debugger.c
 	io_file.c utils_time.c gui_memory_editor.c gui_disassembler.c)
@@ -59,12 +65,12 @@ else()
     add_executable(exec09 m6809.c 
 	device_rom.c device_ram.c
 	device_m6850.c device_m6840.c device.c 
-	monitor.c bus_access.c 
+	monitor.c bus_access.c
 	symtab.c  simulator.c cli_monitor.c main.c
 	machine.c machine_bloo.c gui_monitor.c  gui_debugger.c
 	io_file.c utils_time.c gui_memory_editor.c gui_disassembler.c)
 endif()
-target_link_libraries(exec09 sokol)
+target_link_libraries(exec09 sokol tinyfiledialogs)
 
 # Emscripten-specific linker options
 if (CMAKE_SYSTEM_NAME STREQUAL Emscripten)

@@ -2,14 +2,14 @@
 #include "gui_debugger.h"
 #include "monitor.h"
 #include "m6809.h"
+#include "machine.h"
 #include "simulator.h"
 #include "bus_access.h"
 #include "types.h"
 
 #define MAX_HISTORY_DISPLAY 9
 
-BOOLEAN refresh = TRUE;
-
+BOOLEAN run = false;
 
 extern unsigned int trace_offset;
 extern target_addr_t trace_buffer[MAX_TRACE];
@@ -40,7 +40,10 @@ void gui_debugger(ImVec2 pos)
     ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoMove;
-    //igPushStyleColorImVec4(ImGuiCol_WindowBg, (ImVec4){0.1f, 0.1f, 0.1f, 1.0f});
+    if(run == true)
+    {
+        sim_run();
+    }
     igSetNextWindowPos(pos, ImGuiCond_Once);
     igBegin("Debugger", NULL, flags); //Création de la fenêtre
     igAlignTextToFramePadding();
@@ -81,7 +84,7 @@ void gui_debugger(ImVec2 pos)
     igText("  S:"); igSameLine();
     igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
     snprintf(reg_s_str, sizeof(reg_s_str), "0x%04X", m6809_get_s());
-    igInputText("##_[S]", reg_s_str, IM_ARRAYSIZE(reg_s_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
+    igInputText("##_S", reg_s_str, IM_ARRAYSIZE(reg_s_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
     igText("[S]:"); igSameLine();
     igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
     snprintf(reg_s_ptr_str, sizeof(reg_s_ptr_str), "0x%04X", bus_read16(m6809_get_s()));
@@ -122,15 +125,27 @@ void gui_debugger(ImVec2 pos)
     igButton("Step"); igSameLine();
     if (igIsItemClicked())
     {
-        // Action à effectuer lorsque le bouton est cliqué
         sim_run();
-        refresh = TRUE;
     }
     igSetNextItemWidth(60.0f); 
-    igButton("Continue");igSameLine();
+    if(igButton("Continue"))
+    {
+        run = true;
+    }
+    igSameLine();
     igSetNextItemWidth(120.0f);
-    igButton("Break");igSameLine();
-    igNewLine();
+    if (igButton("Break"))
+    {
+        run = false;
+    }
+    igSameLine();
+    igSetNextItemWidth(120.0f);
+    if(igButton("Reset"))
+    {
+        run = false;
+        machine_reset();
+    }
+    //igNewLine();
 
     //Tableau des instructions récentes
     ImGuiTableFlags table_flags = ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_BordersOuterV;

@@ -1829,6 +1829,7 @@ int monitor_display_insn (absolute_address_t addr, char *retbuf)
 {
    char buf[64];
    int i;
+   printf("%04X\n", addr);
    int size = dasm(buf, addr);
 
    const char* name;

@@ -44,9 +44,6 @@ unsigned *index_regs[4] = { &X, &Y, &U, &S };
 
 int cwai_state = CWAI_STATE_IDLE;
 
-extern int dump_cycles_on_success;
-extern int trace_enabled;
-
 void irq (void);
 
 void firq (void);
@@ -2878,7 +2875,6 @@ void m6809_reset (void)
    H = N = OV = C = 0;
    Z = 1;
    EFI = F_FLAG | I_FLAG;
-
    change_pc (bus_read16 (0xfffe));
    set_cpu_is_running ();
 }

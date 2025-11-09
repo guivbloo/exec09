@@ -62,7 +62,7 @@ void bloo_display()
 	
     gui_memory_editor((ImVec2){ 1.0f, 360.0f });
 
-	gui_disassembler((ImVec2){ 640.0f, 360.0f });
+	//gui_disassembler((ImVec2){ 640.0f, 360.0f });
 
 	m6850_display(uart, (ImVec2){640.0f, 1.0f});
 
