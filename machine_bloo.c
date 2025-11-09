@@ -11,8 +11,6 @@
 #include "machine_bloo.h"
 #include "cimgui.h"
 #include "gui_memory_editor.h"
-#include "gui_debugger.h"
-#include "gui_disassembler.h"
 
 
 
@@ -58,7 +56,6 @@
 
 void bloo_display()
 {
-	gui_debugger((ImVec2){ 1.0f, 1.0f });
 	
     gui_memory_editor((ImVec2){ 1.0f, 360.0f });
 

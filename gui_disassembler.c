@@ -47,7 +47,7 @@ void gui_disassembler(ImVec2 pos)
             else
             {
                 char buff[64];  
-                size += monitor_display_insn (to_absolute(dis_start_address+size), buff);
+                size += monitor_display_insn (dis_start_address+size, buff);
                 igText("%s", buff);
             }
         }

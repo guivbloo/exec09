@@ -58,7 +58,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Windows)
 	device_m6850.c device_m6840.c device.c 
 	monitor.c bus_access.c
 	symtab.c  simulator.c cli_monitor.c main.c
-	machine.c machine_bloo.c gui_monitor.c  gui_debugger.c
+	machine.c machine_bloo.c gui_monitor.c
 	io_file.c utils_time.c gui_memory_editor.c gui_disassembler.c)
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT exec09)
 else()
@@ -67,7 +67,7 @@ else()
 	device_m6850.c device_m6840.c device.c 
 	monitor.c bus_access.c
 	symtab.c  simulator.c cli_monitor.c main.c
-	machine.c machine_bloo.c gui_monitor.c  gui_debugger.c
+	machine.c machine_bloo.c gui_monitor.c
 	io_file.c utils_time.c gui_memory_editor.c gui_disassembler.c)
 endif()
 target_link_libraries(exec09 sokol tinyfiledialogs)

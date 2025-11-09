@@ -94,6 +94,7 @@ int dasm (char *, absolute_address_t);
 void monitor_set_debug(BOOLEAN status);
 BOOLEAN monitor_get_debug_status (void);
 breakpoint_t* brkalloc (void);
+void brk_enable(breakpoint_t *br, int flag);
 breakpoint_t* brkfind_by_id (unsigned int id);
 breakpoint_t* brkfind_by_addr (absolute_address_t addr);
 void command_trace_insn (target_addr_t addr);
@@ -107,6 +108,8 @@ unsigned long eval_mem (char *expr, eval_mode_t mode, char *eflag);
 int monitor_load_map_file (const char *name);
 int monitor_load_image (const char *name);
 void monitor_display_pc_content (char *buf);
-int monitor_display_insn (absolute_address_t addr, char *retbuf);
+int monitor_display_insn (target_addr_t addr, char *retbuf);
+void monitor_breakpoint_add(target_addr_t addr);
+BOOLEAN monitor_breakpoint_hit (breakpoint_t *br);
 
 #endif

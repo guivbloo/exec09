@@ -1238,7 +1238,7 @@ breakpoint_t* brkfind_by_addr (absolute_address_t addr)
 {
    unsigned int n;
    for (n = 0; n < MAX_BREAKS; n++)
-      if (breaktab[n].addr == addr)
+      if (breaktab[n].addr == addr && breaktab[n].used == 1)
          return &breaktab[n];
    return NULL;
 }
@@ -1825,15 +1825,15 @@ void et_virtual (unsigned long *val, int writep)
    last_cycles = m6809_get_cycles ();
 }
 
-int monitor_display_insn (absolute_address_t addr, char *retbuf)
+int monitor_display_insn (target_addr_t rel_addr, char *retbuf)
 {
    char buf[64];
    int i;
-   printf("%04X\n", addr);
+   absolute_address_t addr = to_absolute(rel_addr);
    int size = dasm(buf, addr);
 
    const char* name;
-   sprintf(retbuf, "0x%04lX ", addr & 0xFFFFFF);
+   sprintf(retbuf, "0x%04X ", rel_addr & 0xFFFF);
 
    for (i = 0; i < size; i++)
       sprintf(retbuf + strlen(retbuf), "%02X", bus_read8_abs(addr + i));
@@ -1851,9 +1851,34 @@ int monitor_display_insn (absolute_address_t addr, char *retbuf)
    return size;
 }
 
+void monitor_breakpoint_add(target_addr_t addr)
+{
+    breakpoint_t *br = brkalloc ();
+    absolute_address_t abs_addr = to_absolute(addr);
+    br->addr = abs_addr;
+    br->on_execute = 1;
+}
+
+/*
+Return TRUE if program shall stop
+FALSE otherwise
+*/
+BOOLEAN monitor_breakpoint_hit (breakpoint_t *br)
+{
+  if(br->keep_running == 0)
+	{
+		return(TRUE);
+	}
+	else
+	{
+		return(FALSE);	
+	}
+}
+
+
 void monitor_display_pc_content (char *buf)
 {
-  absolute_address_t ad = to_absolute(m6809_get_pc());
+  target_addr_t ad = m6809_get_pc();
   monitor_display_insn (ad, buf);
 }
 

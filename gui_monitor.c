@@ -12,7 +12,15 @@
 #include "bus_access.h"
 #include "m6809.h"
 #include "simulator.h"
+#include "types.h"
 
+#define MAX_HISTORY_DISPLAY 9
+#define MAX_NEXT_INST_DISPLAY 20
+
+BOOLEAN run = false;
+
+extern unsigned int trace_offset;
+extern target_addr_t trace_buffer[MAX_TRACE];
 
 
 typedef struct {
@@ -23,7 +31,7 @@ typedef struct {
 } state_t;
 static state_t state;
 
-
+void gui_debugger(ImVec2 pos);
 
 void gui_read_hook (absolute_address_t addr)
 {
@@ -33,11 +41,31 @@ void gui_write_hook (absolute_address_t addr, uint8_t val)
 {
     return;
 }
-void gui_insn_hook (void)
+
+BOOLEAN gui_insn_hook (void)
 {
    target_addr_t pc;
    pc = m6809_get_pc ();
-   command_trace_insn (pc);
+    absolute_address_t abspc = to_absolute (pc);
+    breakpoint_t *br = brkfind_by_addr (abspc);
+    if(run == true)
+    {
+        if (br && br->enabled && br->on_execute)
+        {
+            if (monitor_breakpoint_hit (br))
+            {
+                run = false;
+                brk_enable(br, 0);
+                return TRUE;
+            }
+        }
+        else if(br && br->on_execute)
+        {
+                brk_enable(br, 1);
+        }
+    }
+    command_trace_insn (pc);
+    return FALSE;
 }
 
 void SetVSCodeTheme(void)
@@ -165,6 +193,7 @@ static void frame(void) {
         .dpi_scale = sapp_dpi_scale()
     });
 
+    gui_debugger((ImVec2){ 1.0f, 1.0f });
     machine_display();
 
     // the sokol_gfx draw pass
@@ -206,4 +235,259 @@ void gui_monitor_run()
             .enable_clipboard = true,
             .logger.func = slog_func,
         });
+}
+
+
+void gui_debugger(ImVec2 pos)
+{
+    static float f = 0.0f;
+    UINT8 reg_cc;
+    char reg_x_str[7];
+    char reg_x_ptr_str[7];
+    char reg_y_str[7];
+    char reg_y_ptr_str[7];
+    char reg_pc_str[7];
+    char reg_pc_ptr_str[7];    
+    char reg_u_str[7];
+    char reg_u_ptr_str[7];
+    char reg_s_str[7];
+    char reg_s_ptr_str[7];   
+    char reg_dp_str[7];
+    char reg_d_ptr_str[7]; 
+    char reg_a_str[5];
+    char reg_b_str[5];
+    char flags_reg[9] = "        \0";
+    /* Couleurs */
+    ImVec4 on_color  = {0.0f, 0.58f, 1.0f, 1.0f}; 
+    ImVec4 off_color = {0.25f, 0.25f, 0.25f, 1.0f};
+    ImVec4 color_active = {0.2f, 0.6f, 1.0f, 1.0f};  // bleu clair quand active
+    ImVec4 color_inactive = {0.0f, 0.0f, 0.0f, 1.0f}; // noir quand inactive
+    //Caractéristiques de la fenêtre
+    ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
+    flags |= ImGuiWindowFlags_NoCollapse;
+    flags |= ImGuiWindowFlags_NoMove;
+    if(run == true)
+    {
+        sim_run();
+    }
+    igSetNextWindowPos(pos, ImGuiCond_Once);
+    igBegin("Debugger", NULL, flags); //Création de la fenêtre
+    igAlignTextToFramePadding();
+    igText("X:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_x_str, sizeof(reg_x_str), "0x%04X", m6809_get_x());
+    igInputText("##_X", reg_x_str, IM_ARRAYSIZE(reg_x_str),ImGuiInputTextFlags_ReadOnly );igSameLine();
+    igText("[X]:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_x_ptr_str, sizeof(reg_x_ptr_str), "0x%04X", bus_read16(m6809_get_x()));
+    igInputText("##_[X]", reg_x_ptr_str, IM_ARRAYSIZE(reg_x_ptr_str),ImGuiInputTextFlags_ReadOnly); igSameLine();
+    igText("  Y:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_y_str, sizeof(reg_y_str), "0x%04X", m6809_get_y());
+    igInputText("##_Y", reg_y_str, IM_ARRAYSIZE(reg_y_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
+    igText("[Y]:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_y_ptr_str, sizeof(reg_y_ptr_str), "0x%04X", bus_read16(m6809_get_y()));
+    igInputText("##_[Y]", reg_y_ptr_str, IM_ARRAYSIZE(reg_y_ptr_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
+    igText("PC:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_pc_str, sizeof(reg_pc_str), "0x%04X", m6809_get_pc());
+    igInputText("##_PC", reg_pc_str, IM_ARRAYSIZE(reg_pc_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
+    igText("[PC]:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_pc_ptr_str, sizeof(reg_pc_ptr_str), "0x%04X", bus_read16(m6809_get_pc()));
+    igInputText("##_[PC]", reg_pc_ptr_str, IM_ARRAYSIZE(reg_pc_ptr_str),ImGuiInputTextFlags_ReadOnly);
+    igAlignTextToFramePadding();
+    igText("U:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_u_str, sizeof(reg_u_str), "0x%04X", m6809_get_u());
+    igInputText("##_U", reg_u_str, IM_ARRAYSIZE(reg_u_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
+    igText("[U]:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_u_ptr_str, sizeof(reg_u_ptr_str), "0x%04X", bus_read16(m6809_get_u()));
+    igInputText("##_[U]", reg_u_ptr_str, IM_ARRAYSIZE(reg_u_ptr_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
+    igAlignTextToFramePadding();
+    igText("  S:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_s_str, sizeof(reg_s_str), "0x%04X", m6809_get_s());
+    igInputText("##_S", reg_s_str, IM_ARRAYSIZE(reg_s_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
+    igText("[S]:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_s_ptr_str, sizeof(reg_s_ptr_str), "0x%04X", bus_read16(m6809_get_s()));
+    igInputText("##_[S]", reg_s_ptr_str, IM_ARRAYSIZE(reg_s_ptr_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
+    igAlignTextToFramePadding();
+    igText("DP:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_dp_str, sizeof(reg_dp_str), "0x%04X", m6809_get_dp());
+    igInputText("##_DP", reg_dp_str, IM_ARRAYSIZE(reg_dp_str),ImGuiInputTextFlags_ReadOnly);
+    igAlignTextToFramePadding();
+    igText("A:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_a_str, sizeof(reg_a_str), "0x%02X", m6809_get_a());
+    igInputText("##_A", reg_a_str, IM_ARRAYSIZE(reg_a_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
+    igText("  B:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_b_str, sizeof(reg_b_str), "0x%02X", m6809_get_b());
+    igInputText("##_B", reg_b_str, IM_ARRAYSIZE(reg_b_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
+    igText("[D]:"); igSameLine();
+    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
+    snprintf(reg_d_ptr_str, sizeof(reg_d_ptr_str), "0x%04X", bus_read16(m6809_get_d()));
+    igInputText("##_[D]", reg_d_ptr_str, IM_ARRAYSIZE(reg_d_ptr_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
+    igText(" CC:"); igSameLine();
+    if (m6809_get_cc() & C_FLAG) flags_reg[0] = 'C';
+    if (m6809_get_cc() & V_FLAG) flags_reg[1] = 'V';
+    if (m6809_get_cc() & Z_FLAG) flags_reg[2] = 'Z';
+    if (m6809_get_cc() & N_FLAG) flags_reg[3] = 'N';
+    if (m6809_get_cc() & I_FLAG) flags_reg[4] = 'I';
+    if (m6809_get_cc() & H_FLAG) flags_reg[5] = 'H';
+    if (m6809_get_cc() & F_FLAG) flags_reg[6] = 'F';
+    if (m6809_get_cc() & E_FLAG) flags_reg[7] = 'E';
+    igTextColored(color_active, flags_reg);
+    igSeparator();
+    igAlignTextToFramePadding();
+    igSetNextItemWidth(60.0f); 
+    igButton("Next") ; igSameLine();
+    igSetNextItemWidth(60.0f); 
+    igButton("Step"); igSameLine();
+    if (igIsItemClicked())
+    {
+        sim_run();
+    }
+    igSetNextItemWidth(60.0f); 
+    if(igButton("Continue"))
+    {
+        run = true;
+    }
+    igSameLine();
+    igSetNextItemWidth(120.0f);
+    if (igButton("Break"))
+    {
+        run = false;
+    }
+    igSameLine();
+    igSetNextItemWidth(120.0f);
+    if(igButton("Reset"))
+    {
+        run = false;
+        machine_reset();
+    }
+
+    //Tableau des instructions récentes
+    ImGuiTableFlags table_flags = ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_BordersOuterV;
+    igBeginTableEx("table1", 2, table_flags, (ImVec2){0.0f, 200.0f}, 0.0f);
+    igTableSetupColumn("AAA", ImGuiTableColumnFlags_WidthFixed);
+    igTableSetupColumn("Instruction", ImGuiTableColumnFlags_WidthStretch);
+    unsigned int off = (trace_offset - MAX_HISTORY_DISPLAY) % MAX_TRACE;
+    for (int row = 0; row < MAX_HISTORY_DISPLAY; row++) {
+        igTableNextRowEx(ImGuiTableRowFlags_None, 0.0f);
+        char buf[256];
+        char button_name[16];
+        int set;
+        target_addr_t pc = trace_buffer[off];
+        igTableSetColumnIndex(0);
+        breakpoint_t* bk = brkfind_by_addr (to_absolute(pc));
+        if(bk && bk->used == 1)
+            set = 1;
+        else    
+            set = 0;
+        ImVec4 col = set ? on_color : off_color;
+        igPushStyleColorImVec4(ImGuiCol_Button, col);
+        igPushStyleColorImVec4(ImGuiCol_ButtonHovered, col);
+        igPushStyleColorImVec4(ImGuiCol_ButtonActive, col);
+        snprintf(button_name, sizeof(button_name), "B##_%d", row);
+        igSmallButton(button_name);
+        if (igIsItemClicked())
+        {
+            if(set == 1)
+            {
+                brkfree (bk);
+            }
+            else
+            {
+                monitor_breakpoint_add(pc);
+            }
+        }
+        igPopStyleColor();
+        igPopStyleColor();
+        igPopStyleColor();
+        igTableSetColumnIndex(1);
+        monitor_display_insn (pc, buf);
+        igTextDisabled("%s", buf); 
+        off = (off + 1) % MAX_TRACE;
+    }
+    igTableNextRowEx(ImGuiTableRowFlags_None, 0.0f);
+    igTableSetColumnIndex(0);
+    target_addr_t current_pc = m6809_get_pc();
+    char button_name[16];
+    int set;
+    breakpoint_t* bk = brkfind_by_addr (to_absolute(current_pc));
+        if(bk && bk->used == 1)
+            set = 1;
+        else    
+            set = 0;
+        ImVec4 col = set ? on_color : off_color;
+        igPushStyleColorImVec4(ImGuiCol_Button, col);
+        igPushStyleColorImVec4(ImGuiCol_ButtonHovered, col);
+        igPushStyleColorImVec4(ImGuiCol_ButtonActive, col);
+        snprintf(button_name, sizeof(button_name), "B##_%d", MAX_HISTORY_DISPLAY);
+        igSmallButton(button_name);
+        if (igIsItemClicked())
+        {
+            if(set == 1)
+            {
+                brkfree (bk);
+            }
+            else
+            {
+                monitor_breakpoint_add(current_pc);
+            }
+        }
+        igPopStyleColor();
+        igPopStyleColor();
+        igPopStyleColor();
+    igTableSetColumnIndex(1);
+    char buf[256];
+    monitor_display_pc_content(buf);
+    igTextColored(color_active, "%s", buf);
+    int size = dasm(buf, to_absolute(current_pc));
+    for (int row = MAX_HISTORY_DISPLAY+1; row < MAX_HISTORY_DISPLAY + MAX_NEXT_INST_DISPLAY; row++) {
+        igTableNextRowEx(ImGuiTableRowFlags_None, 0.0f);
+        char buf[256];
+        char button_name[16];
+        int set;
+        igTableSetColumnIndex(0);
+        breakpoint_t* bk = brkfind_by_addr (to_absolute(current_pc+size));
+        if(bk && bk->used == 1)
+            set = 1;
+        else    
+            set = 0;
+        ImVec4 col = set ? on_color : off_color;
+        igPushStyleColorImVec4(ImGuiCol_Button, col);
+        igPushStyleColorImVec4(ImGuiCol_ButtonHovered, col);
+        igPushStyleColorImVec4(ImGuiCol_ButtonActive, col);
+        snprintf(button_name, sizeof(button_name), "B##_%d", row);
+        igSmallButton(button_name);
+        if (igIsItemClicked())
+        {
+            if(set == 1)
+            {
+                brkfree (bk);
+            }
+            else
+            {
+                monitor_breakpoint_add(current_pc+size);
+            }
+        }
+        igPopStyleColor();
+        igPopStyleColor();
+        igPopStyleColor();
+        igTableSetColumnIndex(1);
+        monitor_display_insn (current_pc+size, buf);
+        igText("%s", buf); 
+        size += dasm(buf, to_absolute(current_pc+size));
+        off = (off + 1) % MAX_TRACE;
+    }
+    igEndTable();
+    igText("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / igGetIO()->Framerate, igGetIO()->Framerate);
+    igEnd();
 }

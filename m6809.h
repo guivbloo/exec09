@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-extern void (*m6809_insn_hook)(void);
+extern BOOLEAN (*m6809_insn_hook)(void);
 
 #define E_FLAG 0x80
 #define F_FLAG 0x40

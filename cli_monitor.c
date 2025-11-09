@@ -1353,7 +1353,7 @@ void print_current_insn (void)
    print_insn_long(to_absolute(m6809_get_pc()));
 }
 
-void command_insn_hook (void)
+BOOLEAN command_insn_hook (void)
 {
    target_addr_t pc;
    absolute_address_t abspc;
@@ -1369,7 +1369,7 @@ void command_insn_hook (void)
 			monitor_set_display_debug(TRUE);
 
    if (active_break_count == 0)
-      return;
+      return FALSE;
 
    abspc = to_absolute (pc);
    br = brkfind_by_addr (abspc);
@@ -1377,11 +1377,12 @@ void command_insn_hook (void)
    {
       breakpoint_hit (br);
       if (monitor_get_display_debug() == 0)
-         return;
+         return TRUE;
       if (br->temp)
          brkfree (br);
       else
          printf ("Breakpoint %d reached.\n", br->id);
+      return TRUE;
    }
 }
 
