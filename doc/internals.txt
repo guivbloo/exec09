@@ -7,9 +7,7 @@ define new ones.
 The 6809 processor can access a 16-bit address space and defining a
 machine involves defining what is in the address space.
 
-The address space is populated by a set of "devices". Consider the
-imaginary machine foo. The machine is initialised by foo_init() and
-that routine contains a series of calls to device_define().
+The address space is populated by a set of "devices".
 
 Each device is an instance of a certain "class". There are pre-defined
 classes for RAM, ROM, console-io and some others.
@@ -198,8 +196,27 @@ binary, how can the ROM exist other than when pre-loaded from an image
 (but I know that it can be loaded from srec..).
 
 
+TODO short term
+---------------
+
+[GUI] Management of BRKPT on R-W-R/W access to memory
+[GUI] Memory Edition
+[GUI] Add tooltips for CC registers
+[GUI] Add a menu to manage display of windows
+[GUI] Add a menu to load s19 or hex files
+[GUI] Add a display to summarize number of BRKPT in use vs total number of BRKP allowed
+[GUI] Add a window for Stack usage
+[CLI] Check that CLI is still OK especially on BRKPT
+[ALL] Rationalize BRKPT code in monitor
+[ALL] Documentation in this file
+[ALL] README update (how to add a machine)
 
 
 NEXT
-
-different/wider address spaces, why what for and how.
+----
+[ALL] Add MC6840 simulation
+[ALL] Add integration in VSCode
+[ALL] Add Audio device
+[ALL] Add Video device
+[ALL] Add memory windowing management
+[ALL] Add C soure code management
