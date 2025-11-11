@@ -57,7 +57,7 @@
 void bloo_display()
 {
 	
-    gui_memory_editor((ImVec2){ 1.0f, 360.0f });
+
 
 	//gui_disassembler((ImVec2){ 640.0f, 360.0f });
 

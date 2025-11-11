@@ -36,6 +36,7 @@ typedef struct
 	unsigned int last_write : 16;
 	unsigned int write_mask : 16;
    absolute_address_t addr;
+   target_addr_t addr_target;
    char condition[128];
    thread_id_t tid;
    unsigned int pass_count;
@@ -110,6 +111,8 @@ int monitor_load_image (const char *name);
 void monitor_display_pc_content (char *buf);
 int monitor_display_insn (target_addr_t addr, char *retbuf);
 void monitor_breakpoint_add(target_addr_t addr);
+void monitor_watchpoint_add(target_addr_t addr, int on_read, int on_write);
 BOOLEAN monitor_breakpoint_hit (breakpoint_t *br);
+uint8_t monitor_breakpoint_used(void);
 
 #endif

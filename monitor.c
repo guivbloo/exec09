@@ -1195,6 +1195,20 @@ void brk_enable(breakpoint_t *br, int flag)
    }
 }
 
+uint8_t monitor_breakpoint_used(void)
+{
+  unsigned int n;
+  uint8_t i = 0;
+  for (n = 0; n < MAX_BREAKS; n++)
+  {
+    if (breaktab[n].used)
+    {
+        i++;
+    }
+  }
+  return i;
+}
+
 void brkfree (breakpoint_t *br)
 {
    brk_enable (br, 0);
@@ -1856,7 +1870,18 @@ void monitor_breakpoint_add(target_addr_t addr)
     breakpoint_t *br = brkalloc ();
     absolute_address_t abs_addr = to_absolute(addr);
     br->addr = abs_addr;
+    br->addr_target = addr;
     br->on_execute = 1;
+}
+
+void monitor_watchpoint_add(target_addr_t addr, int on_read, int on_write)
+{
+    breakpoint_t *br = brkalloc ();
+    absolute_address_t abs_addr = to_absolute(addr);
+    br->addr = abs_addr;
+    br->addr_target = addr;
+    br->on_read = on_read;
+    br->on_write = on_write;
 }
 
 /*

@@ -13,6 +13,7 @@
 #include "device_m6850.h"
 #include "cimgui.h"
 #include "tinyfiledialogs.h"
+#include "gui_colors.h"
 
 
 
@@ -228,7 +229,6 @@ void m6850_display(struct hw_device *dev, ImVec2 pos)
     ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoMove;
-    //igPushStyleColorImVec4(ImGuiCol_WindowBg, (ImVec4){0.1f, 0.1f, 0.1f, 1.0f});
   igSetNextWindowPos(pos, ImGuiCond_Once);
     if (igBegin("ACIA 6850", NULL, flags))
     {
@@ -259,9 +259,6 @@ void m6850_display(struct hw_device *dev, ImVec2 pos)
         igInputText("##_SR", reg_status, IM_ARRAYSIZE(reg_status),ImGuiInputTextFlags_ReadOnly);
         igSeparator();
         igText("Control Register Bits");
-/* Couleurs */
-ImVec4 on_color  = {0.0f, 0.58f, 1.0f, 1.0f}; 
-ImVec4 off_color = {0.25f, 0.25f, 0.25f, 1.0f};
 
 /* Noms détaillés (pour tooltips) */
 const char *bit_desc[8] = {
@@ -287,7 +284,7 @@ if (igBeginTable("ctrl_bits_table", 8, ImGuiTableFlags_SizingFixedFit))
     for (int bit = 7; bit >= 0; bit--) {
         igTableSetColumnIndex(7 - bit);
         bool set = (port->ctrl >> bit) & 1;
-        ImVec4 col = set ? on_color : off_color;
+        ImVec4 col = set ? blue_hover : border_col;
         igPushStyleColorImVec4(ImGuiCol_Button, col);
         igPushStyleColorImVec4(ImGuiCol_ButtonHovered, col);
         igPushStyleColorImVec4(ImGuiCol_ButtonActive, col);
@@ -343,7 +340,7 @@ if (igBeginTable("status_bits_table", 8, ImGuiTableFlags_SizingFixedFit))
     for (int bit = 7; bit >= 0; bit--) {
         igTableSetColumnIndex(7 - bit);
         bool set = (port->status >> bit) & 1;
-        ImVec4 col = set ? on_color : off_color;
+        ImVec4 col = set ? blue_hover : border_col;
         igPushStyleColorImVec4(ImGuiCol_Button, col);
         igPushStyleColorImVec4(ImGuiCol_ButtonHovered, col);
         igPushStyleColorImVec4(ImGuiCol_ButtonActive, col);
@@ -380,8 +377,7 @@ if (igBeginTable("status_bits_table", 8, ImGuiTableFlags_SizingFixedFit))
 {
     for (int i = 0; i < comm_log_count; i++) {
         struct log_entry *e = &comm_log[i];
-        ImVec4 color = e->is_tx ? (ImVec4){0.3f,0.6f,1.0f,1.0f}
-                                : (ImVec4){0.3f,0.9f,0.3f,1.0f};
+        ImVec4 color = e->is_tx ? text_green : blue;
 
         igTextColored(color, "[%s]", e->is_tx ? "TX" : "RX");
         igSameLine();
@@ -466,7 +462,6 @@ igEndChild();
         }
         igSameLine();
         igInputText("##Firmware Path", firmware_path, sizeof(firmware_path), ImGuiInputTextFlags_ReadOnly);
-        ImVec4 blue = {0.0f, 0.55f, 0.95f, 1.0f}; // ton bleu VS Code
         igText("Progress:");
         igSameLine();
         igPushStyleColorImVec4(ImGuiCol_PlotHistogram, blue);
