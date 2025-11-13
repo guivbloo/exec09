@@ -199,18 +199,13 @@ binary, how can the ROM exist other than when pre-loaded from an image
 TODO short term
 ---------------
 
-[GUI] Management of BRKPT on R-W-R/W access to memory
-[GUI] Memory Edition
-[GUI] Add tooltips for CC registers
-[GUI] Add a menu to manage display of windows
 [GUI] Add a menu to load s19 or hex files
-[GUI] Add a display to summarize number of BRKPT in use vs total number of BRKP allowed
 [GUI] Add a window for Stack usage
 [CLI] Check that CLI is still OK especially on BRKPT
 [ALL] Rationalize BRKPT code in monitor
 [ALL] Documentation in this file
 [ALL] README update (how to add a machine)
-
+[GUI] Memory Edition
 
 NEXT
 ----
