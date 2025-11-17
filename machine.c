@@ -371,7 +371,7 @@ int machine_init (const char *machine_name)
 {
 	//extern struct machine simple_machine;
 	extern machine_t bloo_machine;
-	//extern struct machine eon_machine;
+	extern machine_t video_machine;
 	//extern struct machine eon2_machine;
 	//extern struct machine smii_machine;
 	//extern struct machine multicomp09_machine;
@@ -399,7 +399,11 @@ int machine_init (const char *machine_name)
 		machine = &bloo_machine;
 		machine->init();
 	}	
-	//else if machine_match (machine_name, boot_rom_file, &simple_machine));
+	else if (machine_match (machine_name, &video_machine))
+	{
+		machine = &video_machine;
+		machine->init();
+	}
 	//else if (machine_match (machine_name, boot_rom_file, &eon2_machine));
 	//else if (machine_match (machine_name, boot_rom_file, &smii_machine));
 	//else if (machine_match (machine_name, boot_rom_file, &kipper1_machine));

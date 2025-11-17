@@ -150,3 +150,7 @@ build/CMakeFiles/tinyfiledialogs.dir/tinyfiledialogs/tinyfiledialogs.c.o
 build/CMakeFiles/tinyfiledialogs.dir/tinyfiledialogs/tinyfiledialogs.c.o.d
 build/CMakeFiles/exec09.dir/gui_colors.c.o
 build/CMakeFiles/exec09.dir/gui_colors.c.o.d
+build/CMakeFiles/exec09.dir/device_tms9918.c.o
+build/CMakeFiles/exec09.dir/device_tms9918.c.o.d
+build/CMakeFiles/exec09.dir/machine_video_test.c.o
+build/CMakeFiles/exec09.dir/machine_video_test.c.o.d

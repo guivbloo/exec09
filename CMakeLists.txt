@@ -56,18 +56,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL Windows)
     add_executable(exec09 WIN32 m6809.c 
 	device_rom.c device_ram.c
 	device_m6850.c device_m6840.c device.c 
-	monitor.c bus_access.c gui_colors.c
+	monitor.c bus_access.c gui_colors.c device_tms9918.c
 	symtab.c  simulator.c cli_monitor.c main.c
-	machine.c machine_bloo.c gui_monitor.c
+	machine.c machine_bloo.c machine_video_test.c gui_monitor.c
 	io_file.c utils_time.c)
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT exec09)
 else()
     add_executable(exec09 m6809.c 
 	device_rom.c device_ram.c
 	device_m6850.c device_m6840.c device.c 
-	monitor.c bus_access.c gui_colors.c
+	monitor.c bus_access.c gui_colors.c device_tms9918.c
 	symtab.c  simulator.c cli_monitor.c main.c
-	machine.c machine_bloo.c gui_monitor.c
+	machine.c machine_bloo.c machine_video_test.c gui_monitor.c
 	io_file.c utils_time.c )
 endif()
 target_link_libraries(exec09 sokol tinyfiledialogs)

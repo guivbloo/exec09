@@ -15,9 +15,15 @@
 #include "simulator.h"
 #include "types.h"
 #include "gui_colors.h"
+#include "device_tms9918.h"
 
 #define MAX_HISTORY_DISPLAY 9
 #define MAX_NEXT_INST_DISPLAY 20
+
+
+
+
+
 
 BOOLEAN run = false;
 
@@ -178,8 +184,6 @@ void SetVSCodeTheme(void)
 }
 
 
-
-
 static void init(void) {
     // setup sokol-gfx, sokol-time and sokol-imgui
     sg_setup(&(sg_desc){
@@ -203,12 +207,14 @@ static void init(void) {
             }
         }
     };
+    tms9918_display_init();
     SetVSCodeTheme();
 }
 
 static void frame(void) {
     const int width = sapp_width();
     const int height = sapp_height();
+
 
     simgui_new_frame(&(simgui_frame_desc_t){
         .width = width,
@@ -221,7 +227,6 @@ static void frame(void) {
     gui_memory_editor((ImVec2){ 1.0f, 350.0f });
     gui_breakpoint_management((ImVec2){ 1.0f, 614.0f });
     machine_display();
-
     // the sokol_gfx draw pass
     sg_begin_pass(&(sg_pass){ .action = state.pass_action, .swapchain = sglue_swapchain() });
     simgui_render();
