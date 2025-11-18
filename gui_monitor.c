@@ -4,6 +4,7 @@
 #include "sokol_glue.h"
 #include "cimgui.h"
 #include "sokol_imgui.h"
+#include "sokol_audio.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -22,6 +23,7 @@
 
 
 
+#define NUM_SAMPLES (32)
 
 
 
@@ -47,6 +49,9 @@ typedef struct {
     bool show_test_window;
     bool show_another_window;
     sg_pass_action pass_action;
+    uint32_t even_odd;
+    int sample_pos;
+    float samples[NUM_SAMPLES];
 } state_t;
 static state_t state;
 
@@ -197,6 +202,11 @@ static void init(void) {
         .logger.func = slog_func,
     });
 
+    saudio_setup(&(saudio_desc){ 
+        .logger.func = slog_func,
+    });
+
+
     /* initialize application state */
     state = (state_t) {
         .show_test_window = true,
@@ -214,6 +224,21 @@ static void init(void) {
 static void frame(void) {
     const int width = sapp_width();
     const int height = sapp_height();
+
+    int num_frames = saudio_expect();
+    float s;
+    for (int i = 0; i < num_frames; i++) {
+        if (state.even_odd++ & (1<<5)) {
+            s = 0.05f;
+        } else {
+            s = -0.05f;
+        }
+        state.samples[state.sample_pos++] = s;
+        if (state.sample_pos == NUM_SAMPLES) {
+            state.sample_pos = 0;
+            saudio_push(state.samples, NUM_SAMPLES);
+        }
+    }
 
 
     simgui_new_frame(&(simgui_frame_desc_t){
@@ -236,6 +261,7 @@ static void frame(void) {
 
 static void cleanup(void) {
     simgui_shutdown();
+    saudio_shutdown();
     sg_shutdown();
 }
 

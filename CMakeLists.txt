@@ -30,6 +30,7 @@ target_include_directories(cimgui INTERFACE cimgui)
 # add headers to the the file list because they are useful to have in IDEs
 set(SOKOL_HEADERS
     sokol/sokol_gfx.h
+    sokol/sokol_audio.h
     sokol/sokol_app.h
     sokol/sokol_imgui.h
     sokol/sokol_glue.h)
@@ -39,6 +40,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
     target_link_libraries(sokol PUBLIC
         "-framework QuartzCore"
         "-framework Cocoa"
+        "-framework AudioToolbox"
         "-framework MetalKit"
         "-framework Metal")
 else()
