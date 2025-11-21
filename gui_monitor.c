@@ -88,7 +88,7 @@ BOOLEAN gui_insn_hook (void)
     {
         if (br && br->enabled && br->on_execute)
         {
-            if (monitor_breakpoint_hit (br))
+            if (br->keep_running == 0)
             {
                 run = false;
                 brk_enable(br, 0);
@@ -299,7 +299,11 @@ void gui_debugger(ImVec2 pos)
     flags |= ImGuiWindowFlags_NoMove;
     if(run == true)
     {
-        sim_run();
+        uint16_t i = 0;
+        do
+        {
+            i += sim_run();
+        } while (run == true && i < 32000);  
     }
     igSetNextWindowPos(pos, ImGuiCond_Once);
     igBegin("Debugger", NULL, flags); //Création de la fenêtre

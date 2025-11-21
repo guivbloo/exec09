@@ -94,10 +94,10 @@ int sim_init(char *prog_name)
 int sim_run()
 {
 	unsigned long nb_cycles = 0;
-	nb_cycles += machine_run ();
+		nb_cycles = machine_run ();
 	/* Align with real time*/
 	idle_loop ();
-	return 0;
+	return nb_cycles;
 }
 
 void sim_exit (uint8_t exit_code)

@@ -1474,6 +1474,61 @@ int dasm (char *buf, absolute_address_t opc)
   return pc - opc;
 }
 
+int monitor_load_lst_file (const char *name)
+{
+  FILE *fp;
+  char lst_filename[256];
+  char buf[256];
+  char *tok_ptr, *value_ptr, *id_ptr;
+  target_addr_t value;
+
+  /* Try appending the suffix 'lst' to the name of the program. */
+  sprintf (lst_filename, "%s.lst", name);
+  fp = file_open (NULL, lst_filename, "r");
+  if (!fp)
+  {
+    /* If that fails, try replacing any existing suffix. */
+    sprintf (lst_filename, "%s", name);
+    char *s = strrchr (lst_filename, '.');
+    if (s)
+    {
+      sprintf (s+1, "lst");
+      fp = file_open(NULL, lst_filename, "r");
+    }
+
+    if (!fp)
+    {
+      fprintf (stderr, "warning: no listing file for %s\n", name);
+      return -1;
+    }
+  }
+
+  for (;;)
+  {
+    fgets (buf, sizeof(buf)-1, fp);
+    if (feof (fp))
+      break;
+
+                tok_ptr = strtok (buf, " \t\n");
+                if (0 != strcmp(tok_ptr, "Symbol:"))
+                    continue;
+
+                id_ptr =  strtok(NULL, " \t\n");
+                // skip over filename
+                tok_ptr = strtok (NULL, " \t\n");
+                // skip over "="
+                tok_ptr = strtok (NULL, " \t\n");
+                value_ptr = strtok (NULL, " \t\n");
+                // get value as hex string
+                value = (target_addr_t) strtoul(value_ptr, NULL, 16);
+
+    sym_add (PROGRAM_SYMTAB_T, id_ptr, to_absolute (value), 0);
+  }
+
+  fclose (fp);
+  return 0;
+}
+
 // nac it would be nice to have an intelligent map file reader..
 int monitor_load_map_file (const char *name)
 {

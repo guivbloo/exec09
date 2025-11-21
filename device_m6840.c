@@ -5,15 +5,16 @@
 #include "types.h"
 #include "device.h"
 #include "device_m6840.h"
+#include "cimgui.h"
 
 
 struct ptm_timer
 {
-    uint16_t timer;
-    uint16_t wlatch;
-    uint8_t ctrl;
-    int output;
-    int event;
+    uint16_t timer; // Current timer value
+    uint16_t wlatch; // Write latch value
+    uint8_t ctrl; // Control register
+    int output; // Output state
+    int event; // Event flag
 };
 
 struct m6840
@@ -24,8 +25,8 @@ struct m6840
     uint8_t sr;
     uint8_t msb;
     uint8_t lsb;
-    uint8_t prescale;
-    unsigned int lastout;
+    uint8_t prescale; 
+    unsigned int lastout; // Last output state
 };
 
 static void m6840_calc_irq(struct m6840 *ptm)
@@ -49,12 +50,14 @@ static void m6840_calc_irq(struct m6840 *ptm)
     }
     /* Check status versus masks and set the SR IRQ bit accordingly */
     if ((ptm->sr & 1) && (ptm->timer[1].ctrl & 0x40))
-        irq = 0x80;
+        irq = 0x80; 
     if ((ptm->sr & 2) && (ptm->timer[2].ctrl & 0x40))
+    {
         irq = 0x80;
+    }
     if ((ptm->sr & 4) && (ptm->timer[3].ctrl & 0x40))
         irq = 0x80;
-    ptm->sr &= 0x7F;
+    ptm->sr &= 0x7F; 
     ptm->sr |= irq;
 }
 
@@ -88,7 +91,7 @@ static void m6840_calc_outputs(struct m6840 *ptm)
 /* Count a timer in 16 or 8x8 bit mode */
 static void m6840_timer_count(struct ptm_timer *p, int restart)
 {
-    if (p->ctrl & 0x04) 
+    if (p->ctrl & 0x04) // 16 bit mode
     {
         /* The check occurs before the count down */
         if (p->timer == 0) 
@@ -133,7 +136,7 @@ static void m6840_timer_count(struct ptm_timer *p, int restart)
  */
 static void m6840_timer_clock(struct ptm_timer *p)
 {
-    switch((p->ctrl >> 3) & 7) 
+    switch((p->ctrl >> 3) & 7)  // Mode select
     {
         case 0:	/* Continuous */
             m6840_timer_count(p, 1);
@@ -217,10 +220,10 @@ void m6840_external_gate(struct m6840 *ptm, int gate)
 
 static void m6840_soft_reset(struct m6840 *ptm)
 {
-    ptm->timer[1].timer = ptm->timer[1].wlatch;
-    ptm->timer[2].timer = ptm->timer[2].wlatch;
-    ptm->timer[3].timer = ptm->timer[3].wlatch;
-    m6840_calc_irq(ptm);
+    //ptm->timer[1].timer = ptm->timer[1].wlatch;
+    //ptm->timer[2].timer = ptm->timer[2].wlatch;
+    //ptm->timer[3].timer = ptm->timer[3].wlatch;
+    ptm->sr = 0x00;
 }
 
 void m6840_dump(struct hw_device *dev)
@@ -237,25 +240,28 @@ void m6840_reset (struct hw_device *dev)
     ptm->timer[1].wlatch = 0xFFFF;
     ptm->timer[2].wlatch = 0xFFFF;
     ptm->timer[3].wlatch = 0xFFFF;
-    m6840_soft_reset(ptm);
-    ptm->lastout = 0x100;	/* Impossible value to force update */
+    ptm->timer[1].ctrl = 0x01; //Timers in preset state (software reset)
+    ptm->timer[2].ctrl = 0x00;
+    ptm->timer[3].ctrl = 0x00;
+    ptm->sr = 0x00;
+    //ptm->lastout = 0x100;	/* Impossible value to force update */
 }
 
 uint8_t m6840_read (struct hw_device *dev, unsigned long addr)
 {
 	struct m6840 *ptm = (struct m6840 *)dev->priv;
 	struct ptm_timer *p;
-    addr &= 7;
+    addr &= 7; // Get RS0, RS1, RS2
     if (addr == 0)
         return 0xFF;		/* Probably tri-stated */
-    if (addr == 1)
+    if (addr == 1) // Status register read
         return ptm->sr;
-    if (addr & 1)
+    if (addr & 1) 
         return ptm->lsb;
-    addr >>= 1;
+    addr >>= 1; /* Get timer number */
     p = &ptm->timer[addr];
     ptm->lsb = p->timer;
-    ptm->sr &= ~(1 << addr);	/* And clear the interrupt */
+    ptm->sr &= ~(0x01 << (addr-1));	/* And clear the interrupt */
     m6840_calc_irq(ptm);
     return p->timer >> 8;
 }
@@ -264,14 +270,14 @@ void m6840_write (struct hw_device *dev, unsigned long addr, uint8_t val)
 {
 	struct m6840 *ptm = (struct m6840 *)dev->priv;
 	struct ptm_timer *p;
-    addr &= 7;
-    if (addr > 1) 
+    addr &= 7; // Get RS0, RS1, RS2
+    if (addr > 1) // Timer register write
 	{
         if ((addr & 1) == 0) /* Write MSB buffer register */
             ptm->msb = val;
         else 
 		{
-            addr >>= 1;
+            addr >>= 1; /* Get timer number */
             p = &ptm->timer[addr];
             p->wlatch = (ptm->msb << 8) | val; /* p.wlatch contains new timer value
             /* Writing the timer also clears the interrupt if CR3/4 are 0 */
@@ -279,29 +285,37 @@ void m6840_write (struct hw_device *dev, unsigned long addr, uint8_t val)
             {
                 p->timer = p->wlatch;
                 p->output = 0;
-                ptm->sr &= ~(1 << addr-1);
+                ptm->sr &= ~(1 << addr-1); /* Clear interrupt */
                 m6840_calc_irq(ptm);
                 m6840_calc_outputs(ptm);
             }
         }
-        return;
     }
-    if (addr == 1)
+    else if (addr == 1) //Control register #2 write
     {
-        addr = 2;
+        ptm->timer[2].ctrl = val;
+        m6840_calc_irq(ptm);
+
     }
-    else
+    else if (addr == 0) // Control register #1 or #3 write
     {
-        if (addr == 0 && (ptm->timer[2].ctrl & 0x1))
-            addr = 1;
+        if (ptm->timer[2].ctrl & 0x1) 
+        {
+            // Write to CR1
+            ptm->timer[1].ctrl = val;
+            if (val & 1)
+            {
+                m6840_soft_reset(ptm);
+            }
+            m6840_calc_irq(ptm);
+        }
         else
-            addr = 3;
+        {
+            // Write to CR3
+            ptm->timer[3].ctrl = val;
+            m6840_calc_irq(ptm);
+        }
     }
-    ptm->timer[addr].ctrl = val;
-    /* Effects of control changes */
-    if (addr == 1 && (val & 1))
-        m6840_soft_reset(ptm);
-    m6840_calc_irq(ptm);
 }
 
 struct hw_class m6840_class =
@@ -325,4 +339,31 @@ struct hw_device *m6840_create (unsigned long size)
 	dev =  device_create (&m6840_class, size, ptm);
 	m6840_reset(dev);
 	return dev;
+}
+
+void m6840_display(struct hw_device *dev, ImVec2 pos)
+{
+    struct m6840 *ptm = (struct m6840 *)dev->priv;
+	struct ptm_timer *p1, *p2, *p3;      
+    p1 = &ptm->timer[1];
+    p2 = &ptm->timer[2];
+    p3 = &ptm->timer[3];
+    ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
+    flags |= ImGuiWindowFlags_NoCollapse;
+    flags |= ImGuiWindowFlags_NoMove;
+    igSetNextWindowPos(pos, ImGuiCond_Once);
+    igBegin("M6840 PTM", NULL, flags);
+    {
+        igText("Timer 1: %04X", p1->timer);
+        igText("Timer 2: %04X", p2->timer);
+        igText("Timer 3: %04X", p3->timer);
+        igSeparator();
+        igText("Control Registers:");
+        igText("CR1: %02X", p1->ctrl);
+        igText("CR2: %02X", p2->ctrl);
+        igText("CR3: %02X", p3->ctrl);
+        igSeparator();
+        igText("Status Register: %02X", ptm->sr);
+    }
+    igEnd();
 }
