@@ -4,14 +4,13 @@
 #include "sokol_glue.h"
 #include "cimgui.h"
 #include "sokol_imgui.h"
-
+#include "m6809.h"
 #include <string.h>
 #include <stdlib.h>
 #include "gui_monitor.h"
 #include "monitor.h"
 #include "machine.h"
 #include "bus_access.h"
-#include "m6809.h"
 #include "simulator.h"
 #include "types.h"
 #include "gui_colors.h"
@@ -242,10 +241,9 @@ static void frame(void) {
              igEndMainMenuBar();
         }
 
-    gui_debugger((ImVec2){ 1.0f, 1.0f });
-    gui_memory_editor((ImVec2){ 1.0f, 260.0f });
-    gui_specific_features((ImVec2){ 1.0f, 523.0f });
-    gui_cpu_display((ImVec2){ 1.0f, 706.0f });
+    gui_debugger((ImVec2){ 1.0f, 20.0f });
+    gui_memory_editor((ImVec2){ 1.0f, 261.0f });
+    gui_specific_features((ImVec2){ 1.0f, 522.0f });
     machine_display();
     // the sokol_gfx draw pass
     sg_begin_pass(&(sg_pass){ .action = state.pass_action, .swapchain = sglue_swapchain() });
@@ -278,8 +276,8 @@ void gui_monitor_run()
             .frame_cb = frame,
             .cleanup_cb = cleanup,
             .event_cb = input,
-            .width = 1400,
-            .height = 1024,
+            .width = 1368,
+            .height = 1200,
             .window_title = "EXEC09",
             .ios_keyboard_resizes_canvas = false,
             .icon.sokol_default = true,
@@ -312,6 +310,7 @@ void gui_debugger(ImVec2 pos)
         } while (run == true && i < 32000);  
     }
     igSetNextWindowPos(pos, ImGuiCond_Once);
+    igSetNextWindowSize((ImVec2){540.0f, 240.0f}, ImGuiCond_Once);
     igBegin("Debugger", NULL, flags); //Création de la fenêtre
     igAlignTextToFramePadding();
     igSetNextItemWidth(60.0f); 
@@ -343,7 +342,7 @@ void gui_debugger(ImVec2 pos)
 
     //Tableau des instructions récentes
     ImGuiTableFlags table_flags = ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_BordersOuterV;
-    igBeginTableEx("table1", 4, table_flags, (ImVec2){0.0f, 200.0f}, 0.0f);
+    igBeginTableEx("table1", 4, table_flags, (ImVec2){0.0f, 180.0f}, 0.0f);
     igTableSetupColumn("But", ImGuiTableColumnFlags_WidthFixed);
     igTableSetupColumn("Adr", ImGuiTableColumnFlags_WidthFixed);
     igTableSetupColumn("Ins", ImGuiTableColumnFlags_WidthFixed);
@@ -428,6 +427,7 @@ void gui_debugger(ImVec2 pos)
 void gui_memory_editor(ImVec2 pos)
 {
     igSetNextWindowPos(pos, ImGuiCond_Once);
+    igSetNextWindowSize((ImVec2){540.0f, 260.0f}, ImGuiCond_Once);
     char str[20];
     char str2[20];
     char str3[20];
@@ -438,7 +438,7 @@ void gui_memory_editor(ImVec2 pos)
     ImGuiTableFlags table_flags = ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_BordersOuterV;
 
     igBegin("Memory Viewer", NULL, flags); //Création de la fenêtre
-    igBeginTableEx("table1", 18, table_flags, (ImVec2){526.0f, 200.0f}, 0.0f);
+    igBeginTableEx("table1", 18, table_flags, (ImVec2){526.0f, 190.0f}, 0.0f);
     for (int row = 0; row < length/16; row++) {
         igTableNextRowEx(ImGuiTableRowFlags_None, 0.0f);
         str2[0] = '\0';
@@ -544,7 +544,7 @@ void gui_memory_editor(ImVec2 pos)
 void gui_specific_features(ImVec2 pos)
 {
     igSetNextWindowPos(pos, ImGuiCond_Once);
-    igSetNextWindowSize((ImVec2){542.0f, 182.0f}, ImGuiCond_Once);
+    igSetNextWindowSize((ImVec2){540.0f, 182.0f}, ImGuiCond_Once);
     ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoMove;
@@ -649,98 +649,4 @@ void gui_specific_features(ImVec2 pos)
     igEnd();
 }
 
-void gui_cpu_display(ImVec2 pos)
-{
-    igSetNextWindowPos(pos, ImGuiCond_Once);
-    igSetNextWindowSize((ImVec2){541.0f, 0.0f}, ImGuiCond_Once);
-    ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
-    flags |= ImGuiWindowFlags_NoCollapse;
-    flags |= ImGuiWindowFlags_NoMove;
 
-    char reg_x_str[7];
-    char reg_x_ptr_str[7];
-    char reg_y_str[7];
-    char reg_y_ptr_str[7];
-    char reg_pc_str[7];
-    char reg_pc_ptr_str[7];    
-    char reg_u_str[7];
-    char reg_u_ptr_str[7];
-    char reg_s_str[7];
-    char reg_s_ptr_str[7];   
-    char reg_dp_str[7];
-    char reg_d_ptr_str[7]; 
-    char reg_a_str[5];
-    char reg_b_str[5];
-    char flags_reg[9] = "        \0";
-
-    igBegin("M6809 CPU", NULL, flags); //Création de la fenêtre
-    igAlignTextToFramePadding();
-    igText("X:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_x_str, sizeof(reg_x_str), "0x%04X", m6809_get_x());
-    igInputText("##_X", reg_x_str, IM_ARRAYSIZE(reg_x_str),ImGuiInputTextFlags_ReadOnly );igSameLine();
-    igText("[X]:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_x_ptr_str, sizeof(reg_x_ptr_str), "0x%04X", bus_read16_abs(to_absolute(m6809_get_x())));
-    igInputText("##_[X]", reg_x_ptr_str, IM_ARRAYSIZE(reg_x_ptr_str),ImGuiInputTextFlags_ReadOnly); igSameLine();
-    igText("  Y:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_y_str, sizeof(reg_y_str), "0x%04X", m6809_get_y());
-    igInputText("##_Y", reg_y_str, IM_ARRAYSIZE(reg_y_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
-    igText("[Y]:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_y_ptr_str, sizeof(reg_y_ptr_str), "0x%04X", bus_read16_abs(to_absolute(m6809_get_y())));
-    igInputText("##_[Y]", reg_y_ptr_str, IM_ARRAYSIZE(reg_y_ptr_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
-    igText("PC:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_pc_str, sizeof(reg_pc_str), "0x%04X", m6809_get_pc());
-    igInputText("##_PC", reg_pc_str, IM_ARRAYSIZE(reg_pc_str),ImGuiInputTextFlags_ReadOnly);
-    igAlignTextToFramePadding();
-    igText("U:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_u_str, sizeof(reg_u_str), "0x%04X", m6809_get_u());
-    igInputText("##_U", reg_u_str, IM_ARRAYSIZE(reg_u_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
-    igText("[U]:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_u_ptr_str, sizeof(reg_u_ptr_str), "0x%04X", bus_read16_abs(to_absolute(m6809_get_u())));
-    igInputText("##_[U]", reg_u_ptr_str, IM_ARRAYSIZE(reg_u_ptr_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
-    igAlignTextToFramePadding();
-    igText("  S:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_s_str, sizeof(reg_s_str), "0x%04X", m6809_get_s());
-    igInputText("##_S", reg_s_str, IM_ARRAYSIZE(reg_s_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
-    igText("[S]:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_s_ptr_str, sizeof(reg_s_ptr_str), "0x%04X", bus_read16_abs(to_absolute(m6809_get_s())));
-    igInputText("##_[S]", reg_s_ptr_str, IM_ARRAYSIZE(reg_s_ptr_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
-    igAlignTextToFramePadding();
-    igText("DP:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_dp_str, sizeof(reg_dp_str), "0x%04X", m6809_get_dp());
-    igInputText("##_DP", reg_dp_str, IM_ARRAYSIZE(reg_dp_str),ImGuiInputTextFlags_ReadOnly);
-    igAlignTextToFramePadding();
-    igText("A:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_a_str, sizeof(reg_a_str), "0x%02X", m6809_get_a());
-    igInputText("##_A", reg_a_str, IM_ARRAYSIZE(reg_a_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
-    igText("  B:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_b_str, sizeof(reg_b_str), "0x%02X", m6809_get_b());
-    igInputText("##_B", reg_b_str, IM_ARRAYSIZE(reg_b_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
-    igText("[D]:"); igSameLine();
-    igSetNextItemWidth(60.0f); // largeur en pixels du prochain élément
-    snprintf(reg_d_ptr_str, sizeof(reg_d_ptr_str), "0x%04X", bus_read16_abs(to_absolute(m6809_get_d())));
-    igInputText("##_[D]", reg_d_ptr_str, IM_ARRAYSIZE(reg_d_ptr_str),ImGuiInputTextFlags_ReadOnly);igSameLine();
-    igText(" CC:"); igSameLine();
-    if (m6809_get_cc() & C_FLAG) flags_reg[0] = 'C';
-    if (m6809_get_cc() & V_FLAG) flags_reg[1] = 'V';
-    if (m6809_get_cc() & Z_FLAG) flags_reg[2] = 'Z';
-    if (m6809_get_cc() & N_FLAG) flags_reg[3] = 'N';
-    if (m6809_get_cc() & I_FLAG) flags_reg[4] = 'I';
-    if (m6809_get_cc() & H_FLAG) flags_reg[5] = 'H';
-    if (m6809_get_cc() & F_FLAG) flags_reg[6] = 'F';
-    if (m6809_get_cc() & E_FLAG) flags_reg[7] = 'E';
-    igTextColored(blue, flags_reg);
-    igSeparator();
-    igEnd();
-}

@@ -2,6 +2,7 @@
 #define M6809_H
 
 #include "types.h"
+#include "cimgui.h"
 
 extern BOOLEAN (*m6809_insn_hook)(void);
 
@@ -17,6 +18,7 @@ extern BOOLEAN (*m6809_insn_hook)(void);
 int m6809_execute (int);
 void m6809_reset (void);
 void m6809_print_regs (void);
+void m6809_display(ImVec2 pos);
 
 unsigned m6809_get_a  (void);
 unsigned m6809_get_b  (void);

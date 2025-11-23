@@ -1834,7 +1834,6 @@ const char* monitor_addr_name (target_addr_t target_addr)
 
 void init (void)
 {
-  BOOLEAN bool;
 	fctab[0].entry_point = bus_read16 (0xfffe);
 	memset (&fctab[0].entry_regs, 0, sizeof (struct cpu_regs));
 	current_function_call = &fctab[0];

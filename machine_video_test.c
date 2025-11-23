@@ -11,6 +11,7 @@
 #include "device_tms9918.h"
 #include "machine_video_test.h"
 #include "cimgui.h"
+#include "m6809.h"
 
 
 
@@ -64,14 +65,11 @@
 
 void video_display()
 {
-	
-
-
 	//gui_disassembler((ImVec2){ 640.0f, 360.0f });
-
-	m6850_display(uart, (ImVec2){544.0f, 1.0f});
-	tms9918_display (tms9918, (ImVec2){841.0f, 1.0f});
-	m6840_display(ptm, (ImVec2){544.0f, 620.0f});
+	m6809_display((ImVec2){1.0f, 705.0f});
+	m6850_display(uart, (ImVec2){542.0f, 20.0f});
+	tms9918_display (tms9918, (ImVec2){839.0f, 20.0f});
+	m6840_display(ptm, (ImVec2){542.0f, 639.0f});
 
 
 	// Demo 

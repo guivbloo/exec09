@@ -354,7 +354,7 @@ void m6840_display(struct hw_device *dev, ImVec2 pos)
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoMove;
     igSetNextWindowPos(pos, ImGuiCond_Once);
-    igSetNextWindowSize((ImVec2){296.0f, 190.0f}, ImGuiCond_Once);
+    igSetNextWindowSize((ImVec2){296.0f, 170.0f}, ImGuiCond_Once);
     igBegin("M6840 PTM", NULL, flags);
     {
         igText("Registers:");
