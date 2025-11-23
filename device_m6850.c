@@ -230,7 +230,7 @@ void m6850_display(struct hw_device *dev, ImVec2 pos)
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoMove;
   igSetNextWindowPos(pos, ImGuiCond_Once);
-    if (igBegin("ACIA 6850", NULL, flags))
+    if (igBegin("M6850 ACIA", NULL, flags))
     {
         igText("Registers");
         igAlignTextToFramePadding();

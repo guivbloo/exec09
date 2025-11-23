@@ -10,3 +10,4 @@
     ImVec4 border_col           = {0.20f, 0.20f, 0.20f, 1.0f};      // #333333
     ImVec4 text_green           = {0.3059f, 0.7882f, 0.6902f, 1.0f};// #4EC9B0
     ImVec4 text_orange          = {0.8078f, 0.5686f, 0.4706f, 1.0f};// #CE9178
+    ImVec4 grey                 = {0.6549f, 0.6549f, 0.6549f, 1.0f};     //rgb(167, 167, 167)

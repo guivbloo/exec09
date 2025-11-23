@@ -76,7 +76,8 @@ struct function_call *current_function_call;
 /* Automatically break after executing this many instructions */
 int auto_break_insn_count = 0;
 
-
+lst_line_t lst_lines[MAX_LST_LINES];
+int lst_line_count = 0;
 
 
 //unsigned long eval (char *expr, char *eflag);
@@ -1479,8 +1480,6 @@ int monitor_load_lst_file (const char *name)
   FILE *fp;
   char lst_filename[256];
   char buf[256];
-  char *tok_ptr, *value_ptr, *id_ptr;
-  target_addr_t value;
 
   /* Try appending the suffix 'lst' to the name of the program. */
   sprintf (lst_filename, "%s.lst", name);
@@ -1503,30 +1502,73 @@ int monitor_load_lst_file (const char *name)
     }
   }
 
-  for (;;)
-  {
-    fgets (buf, sizeof(buf)-1, fp);
-    if (feof (fp))
-      break;
+  while (fgets(buf, sizeof(buf), fp) && lst_line_count < MAX_LST_LINES) {
+        char *p = buf;
+        // 1. Vérifie si la ligne commence par une adresse hexadécimale (au moins 4 chiffres)
+        if (!isxdigit(p[0]) || !isxdigit(p[1]) || !isxdigit(p[2]) || !isxdigit(p[3]))
+            continue;
 
-                tok_ptr = strtok (buf, " \t\n");
-                if (0 != strcmp(tok_ptr, "Symbol:"))
-                    continue;
+        // 2. Récupère l'adresse (jusqu'à un espace ou tab)
+        char addr_str[9] = {0};
+        int i = 0;
+        while (isxdigit(*p) && i < 8) {
+            addr_str[i++] = *p++;
+        }
+        addr_str[i] = '\0';
+        unsigned int addr = (unsigned int)strtoul(addr_str, NULL, 16);
+        // 3. Passe les espaces
+        while (*p == ' ' || *p == '\t') p++;
 
-                id_ptr =  strtok(NULL, " \t\n");
-                // skip over filename
-                tok_ptr = strtok (NULL, " \t\n");
-                // skip over "="
-                tok_ptr = strtok (NULL, " \t\n");
-                value_ptr = strtok (NULL, " \t\n");
-                // get value as hex string
-                value = (target_addr_t) strtoul(value_ptr, NULL, 16);
+        // 4. Récupère l'instruction hexadécimale (peut être vide)
+        char hex[17] = {0};
+        i = 0;
+        while (*p && !isspace(*p) && *p != '(' && i < 31) {
+            hex[i++] = *p++;
+        }
+        hex[i] = '\0';
+        // 5. Passe les espaces
+while (*p == ' ' || *p == '\t') p++;
 
-    sym_add (PROGRAM_SYMTAB_T, id_ptr, to_absolute (value), 0);
-  }
+// 6. Ignore les blocs ( ... ) éventuels (nom de fichier/ligne)
+while (*p == '(') {
+    while (*p && *p != ')') p++;
+    if (*p == ')') p++;
+    p+=15; // skip line number
+}
 
-  fclose (fp);
-  return 0;
+// 7. Passe encore les espaces
+//while (*p == ' ' || *p == '\t') p++;
+
+// 8. Récupère le code source (jusqu'à ';' ou fin de ligne)
+char source[128] = {0};
+char comment[128] = {0};
+char *semi = strchr(p, ';');
+if (semi) {
+    size_t src_len = semi - p;
+    if (src_len > 127) src_len = 127;
+    strncpy(source, p, src_len);
+    source[src_len] = '\0';
+    // Commentaire
+    strncpy(comment, semi + 1, 127);
+    comment[127] = '\0';
+    char *nl = strchr(comment, '\n');
+    if (nl) *nl = '\0';
+} else {
+    strncpy(source, p, 127);
+    source[127] = '\0';
+    char *nl = strchr(source, '\n');
+    if (nl) *nl = '\0';
+}
+       
+        // 7. Stocke dans le tableau
+        lst_lines[lst_line_count].addr = addr;
+        strncpy(lst_lines[lst_line_count].hex, hex, 17);
+        strncpy(lst_lines[lst_line_count].source, source, 127);
+        strncpy(lst_lines[lst_line_count].comment, comment, 127);
+        lst_line_count++;
+          }
+    fclose(fp);
+    return 0;
 }
 
 // nac it would be nice to have an intelligent map file reader..
@@ -1748,12 +1790,15 @@ int monitor_load_image(const char *name)
         rewind(fp);
         load_s19(fp);
         monitor_load_map_file(name);
+        monitor_load_lst_file (name);
+
     }
   else if (fscanf (fp, ":%2x%4x%2x", &count, &addr, &type) == 3)
     {
         rewind(fp);
         load_hex(fp);
         monitor_load_map_file(name);
+        monitor_load_lst_file (name);
     }
   else
     {

@@ -69,8 +69,9 @@ void video_display()
 
 	//gui_disassembler((ImVec2){ 640.0f, 360.0f });
 
-	m6850_display(uart, (ImVec2){640.0f, 1.0f});
-	tms9918_display (tms9918, (ImVec2){640.0f, 200.0f});
+	m6850_display(uart, (ImVec2){544.0f, 1.0f});
+	tms9918_display (tms9918, (ImVec2){841.0f, 1.0f});
+	m6840_display(ptm, (ImVec2){544.0f, 620.0f});
 
 
 	// Demo 

@@ -703,7 +703,10 @@ void tms9918_display (struct hw_device *dev, ImVec2 pos)
   img_data.mip_levels[0].size = FB_WIDTH * FB_HEIGHT * sizeof(uint32_t);
   sg_update_image(fb_texture, &img_data);
   igSetNextWindowPos(pos, ImGuiCond_Once);
-  igBegin("TMS9918 Framebuffer", NULL, 0);
+  ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
+    flags |= ImGuiWindowFlags_NoCollapse;
+    flags |= ImGuiWindowFlags_NoMove;
+  igBegin("TMS9918 Video", NULL, flags);
   ImTextureID img_id = simgui_imtextureid(view);
   igImageEx(imtexref(img_id), (ImVec2){FB_WIDTH * 2, FB_HEIGHT * 2}, (ImVec2){0,1}, (ImVec2){1, 0});
   igEnd();

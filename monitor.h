@@ -8,6 +8,9 @@
 #define MAX_TRACE 256
 #define IRQ_CYCLE_COUNTS 128
 
+#define MAX_LST_LINES 2048
+
+
 #define MAKE_ADDR(devno, phyaddr) ((devno * 0x10000000L) + phyaddr)
 
 
@@ -42,6 +45,13 @@ typedef struct
    unsigned int pass_count;
    unsigned int ignore_count;
 } breakpoint_t;
+
+typedef struct {
+    target_addr_t addr;
+    char hex[17];
+    char source[128];
+    char comment[128];
+} lst_line_t;
 
 typedef void (*virtual_handler_t) (unsigned long *val, int writep);
 
@@ -114,5 +124,6 @@ void monitor_breakpoint_add(target_addr_t addr);
 void monitor_watchpoint_add(target_addr_t addr, int on_read, int on_write);
 BOOLEAN monitor_breakpoint_hit (breakpoint_t *br);
 uint8_t monitor_breakpoint_used(void);
+
 
 #endif

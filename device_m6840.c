@@ -345,25 +345,63 @@ void m6840_display(struct hw_device *dev, ImVec2 pos)
 {
     struct m6840 *ptm = (struct m6840 *)dev->priv;
 	struct ptm_timer *p1, *p2, *p3;      
+    char reg_temp[7];
     p1 = &ptm->timer[1];
     p2 = &ptm->timer[2];
     p3 = &ptm->timer[3];
+    
     ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoMove;
     igSetNextWindowPos(pos, ImGuiCond_Once);
+    igSetNextWindowSize((ImVec2){296.0f, 190.0f}, ImGuiCond_Once);
     igBegin("M6840 PTM", NULL, flags);
     {
-        igText("Timer 1: %04X", p1->timer);
-        igText("Timer 2: %04X", p2->timer);
-        igText("Timer 3: %04X", p3->timer);
-        igSeparator();
-        igText("Control Registers:");
-        igText("CR1: %02X", p1->ctrl);
-        igText("CR2: %02X", p2->ctrl);
-        igText("CR3: %02X", p3->ctrl);
-        igSeparator();
-        igText("Status Register: %02X", ptm->sr);
+        igText("Registers:");
+        igAlignTextToFramePadding();
+        igText("CR1:"); igSameLine();
+        igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+        snprintf(reg_temp, sizeof(reg_temp), "0x%02X", p1->ctrl);
+        igInputText("##_CR1", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+        igText("CR2:"); igSameLine();
+        igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+        snprintf(reg_temp, sizeof(reg_temp), "0x%02X", p2->ctrl);
+        igInputText("##_CR2", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+        igText("CR3:"); igSameLine();
+        igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+        snprintf(reg_temp, sizeof(reg_temp), "0x%02X", p3->ctrl);
+        igInputText("##_CR3", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly);
+        igAlignTextToFramePadding();
+        igText("L1:"); igSameLine();
+        igSetNextItemWidth(50.0f); // largeur en pixels du prochain élément
+        snprintf(reg_temp, sizeof(reg_temp), "0x%04X", p1->wlatch);
+        igInputText("##_CL1", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+        igText("L2:"); igSameLine();
+        igSetNextItemWidth(50.0f); // largeur en pixels du prochain élément
+        snprintf(reg_temp, sizeof(reg_temp), "0x%04X", p2->wlatch);
+        igInputText("##_CL2", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+        igText("L3:"); igSameLine();
+        igSetNextItemWidth(50.0f); // largeur en pixels du prochain élément
+        snprintf(reg_temp, sizeof(reg_temp), "0x%04X", p3->wlatch);
+        igInputText("##_CL3", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly);
+        igAlignTextToFramePadding();
+        igText("T1:"); igSameLine();
+        igSetNextItemWidth(50.0f); // largeur en pixels du prochain élément
+        snprintf(reg_temp, sizeof(reg_temp), "0x%04X", p1->timer);
+        igInputText("##_T1", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+        igText("T2:"); igSameLine();
+        igSetNextItemWidth(50.0f); // largeur en pixels du prochain élément
+        snprintf(reg_temp, sizeof(reg_temp), "0x%04X", p2->timer);
+        igInputText("##_T2", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+        igText("T3:"); igSameLine();
+        igSetNextItemWidth(50.0f); // largeur en pixels du prochain élément
+        snprintf(reg_temp, sizeof(reg_temp), "0x%04X", p3->timer);
+        igInputText("##_T3", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly);
+        igAlignTextToFramePadding();
+        igText("SR:"); igSameLine();
+        igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+        snprintf(reg_temp, sizeof(reg_temp), "0x%02X", ptm->sr);
+        igInputText("##_SR", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly);
     }
     igEnd();
 }

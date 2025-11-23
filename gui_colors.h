@@ -14,5 +14,6 @@
     extern ImVec4 border_col;
     extern ImVec4 text_green;
     extern ImVec4 text_orange;  
+    extern ImVec4 grey;
 
 #endif /* GUI_COLORS_H */
