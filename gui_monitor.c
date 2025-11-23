@@ -8,6 +8,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 #include "gui_monitor.h"
 #include "monitor.h"
 #include "machine.h"
@@ -227,18 +228,36 @@ static void frame(void) {
 
     int num_frames = saudio_expect();
     float s;
-    for (int i = 0; i < num_frames; i++) {
-        if (state.even_odd++ & (1<<5)) {
-            s = 0.05f;
-        } else {
-            s = -0.05f;
-        }
-        state.samples[state.sample_pos++] = s;
-        if (state.sample_pos == NUM_SAMPLES) {
-            state.sample_pos = 0;
-            saudio_push(state.samples, NUM_SAMPLES);
-        }
+// Génération du son : "Au clair de la lune"
+static const float notes[] = {
+    261.63f, 261.63f, 261.63f, 293.66f, 329.63f, 329.63f, 293.66f, // Au clair de la lune
+    261.63f, 329.63f, 293.66f, 261.63f, 293.66f, 261.63f,           // Mon ami Pierrot
+    293.66f, 329.63f, 293.66f, 261.63f, 293.66f, 261.63f,           // Prête-moi ta plume
+    261.63f, 293.66f, 329.63f, 293.66f, 261.63f, 293.66f, 261.63f   // Pour écrire un mot
+};
+static const int note_count = sizeof(notes)/sizeof(notes[0]);
+static int note_idx = 0;
+static float phase = 0.0f;
+static const float sample_rate = 44100.0f;
+static const int note_duration_samples = 44100 / 4; // 1/4 seconde par note
+static int note_sample = 0;
+
+for (int i = 0; i < num_frames; i++) {
+    float freq = notes[note_idx];
+    float s = 0.1f * sinf(2.0f * 3.1415926f * phase);
+    phase += freq / sample_rate;
+    if (phase >= 1.0f) phase -= 1.0f;
+    state.samples[state.sample_pos++] = s;
+    note_sample++;
+    if (note_sample >= note_duration_samples) {
+        note_sample = 0;
+        note_idx = (note_idx + 1) % note_count;
     }
+    if (state.sample_pos == NUM_SAMPLES) {
+        state.sample_pos = 0;
+        saudio_push(state.samples, NUM_SAMPLES);
+    }
+}
 
 
     simgui_new_frame(&(simgui_frame_desc_t){
