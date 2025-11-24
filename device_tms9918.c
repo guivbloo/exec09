@@ -15,6 +15,7 @@
 #include "sokol_app.h"
 #include "sokol_gfx.h"
 #include "sokol_imgui.h"
+#include "gui_colors.h"
 
 #define FB_WIDTH 256
 #define FB_HEIGHT 192
@@ -698,17 +699,283 @@ static void generate_test_pattern(void)
 void tms9918_update (struct hw_device *dev);
 void tms9918_display (struct hw_device *dev, ImVec2 pos)
 {
+  struct tms9918_port *tms9918 = (struct tms9918_port *)dev->priv;
   generate_test_pattern();
+  char reg_temp[10];
   img_data.mip_levels[0].ptr = framebuffer;
   img_data.mip_levels[0].size = FB_WIDTH * FB_HEIGHT * sizeof(uint32_t);
   sg_update_image(fb_texture, &img_data);
   igSetNextWindowPos(pos, ImGuiCond_Once);
+  igSetNextWindowSize((ImVec2){528.0f, 789.0f}, ImGuiCond_Once);
   ImGuiWindowFlags_ flags = ImGuiWindowFlags_NoResize;
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoMove;
   igBegin("TMS9918 Video", NULL, flags);
   ImTextureID img_id = simgui_imtextureid(view);
   igImageEx(imtexref(img_id), (ImVec2){FB_WIDTH * 2, FB_HEIGHT * 2}, (ImVec2){0,1}, (ImVec2){1, 0});
+  igNewLine();
+  igBeginTabBar(" ", ImGuiTabBarFlags_None);
+  if (igBeginTabItem("Registers", NULL, ImGuiTabItemFlags_None))
+  {
+  
+    igAlignTextToFramePadding();
+    igText("R0:"); igSameLine();
+    igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+    snprintf(reg_temp, sizeof(reg_temp), "0x%02X", tms9918->write_reg[0]);
+    igInputText("##_R0", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+    igText("R1:"); igSameLine();
+    igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+    snprintf(reg_temp, sizeof(reg_temp), "0x%02X", tms9918->write_reg[1]);
+    igInputText("##_R1", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+    igText("R2:"); igSameLine();
+    igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+    snprintf(reg_temp, sizeof(reg_temp), "0x%02X", tms9918->write_reg[2]);
+    igInputText("##_R2", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+    igText("R3:"); igSameLine();
+    igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+    snprintf(reg_temp, sizeof(reg_temp), "0x%02X", tms9918->write_reg[3]);
+    igInputText("##_R3", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+    igText("R4:"); igSameLine();
+    igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+    snprintf(reg_temp, sizeof(reg_temp), "0x%02X", tms9918->write_reg[4]);
+    igInputText("##_R4", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+    igText("R5:"); igSameLine();
+    igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+    snprintf(reg_temp, sizeof(reg_temp), "0x%02X", tms9918->write_reg[5]);
+    igInputText("##_R5", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly);
+    igAlignTextToFramePadding();
+    igText("R6:"); igSameLine();
+    igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+    snprintf(reg_temp, sizeof(reg_temp), "0x%02X", tms9918->write_reg[6]);
+    igInputText("##_R6", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+    igText("R7:"); igSameLine();
+    igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+    snprintf(reg_temp, sizeof(reg_temp), "0x%02X", tms9918->write_reg[7]);
+    igInputText("##_R7", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly); igSameLine();
+    igText("SR:"); igSameLine();
+    igSetNextItemWidth(40.0f); // largeur en pixels du prochain élément
+    snprintf(reg_temp, sizeof(reg_temp), "0x%02X", tms9918->status_reg);
+    igInputText("##_SR", reg_temp, IM_ARRAYSIZE(reg_temp),ImGuiInputTextFlags_ReadOnly);
+    igSeparator();
+    igText("Write Register 0 Bits");
+    /* Noms détaillés (pour tooltips) */
+    const char *r0_bit_desc[8] = {
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "Reserved",
+    "M3 (Mode bit 3)",
+    "External VDP Input"
+    };
+    /* Libellés abrégés sous les bits */
+    const char *r0_bit_labels[8] = {" 0  "," 0  "," 0  "," 0  "," 0  "," 0  "," M3 "," EV "};
+    /* --- Tableau aligné --- */
+    if (igBeginTable("r0_bits_table", 8, ImGuiTableFlags_SizingFixedFit))
+    {
+      /* Ligne 2 : boutons colorés (non cliquables) */
+      igTableNextRow();
+      igBeginDisabled(true);
+      for (int bit = 7; bit >= 0; bit--) 
+      {
+        igTableSetColumnIndex(7 - bit);
+        bool set = (tms9918->write_reg[0] >> bit) & 1;
+        ImVec4 col = set ? blue_hover : border_col;
+        igPushStyleColorImVec4(ImGuiCol_Button, col);
+        igPushStyleColorImVec4(ImGuiCol_ButtonHovered, col);
+        igPushStyleColorImVec4(ImGuiCol_ButtonActive, col);
+        char label[8];
+        snprintf(label, sizeof(label), "%d##CR", bit);
+        igButtonEx(label, (ImVec2){22, 22});
+        igPopStyleColor();
+        igPopStyleColor();
+        igPopStyleColor();
+        if (igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) 
+        {
+            igSetTooltip("%s", r0_bit_desc[bit]);
+        }
+      }
+      igEndDisabled();
+      /* Ligne 3 : noms abrégés */
+      igTableNextRow();
+      for (int bit = 7; bit >= 0; bit--) 
+      {
+        igTableSetColumnIndex(7 - bit);
+        igText("%s", r0_bit_labels[bit]);
+      }
+      igEndTable();
+    }
+    igSeparator();
+    igText("Write Register 1 Bits");
+    /* Noms détaillés (pour tooltips) */
+    const char *r1_bit_desc[8] = {
+    "4/16K VRAM Size",
+    "Display Enable (BLANK)",
+    "Interrupt Enable",
+    "M1 (Mode bits 1)",
+    "M2 (Mode bit 2)",
+    "Reserved",
+    "Sprite Size",
+    "Sprite Magnification"
+    };
+    /* Libellés abrégés sous les bits */
+    const char *r1_bit_labels[8] = {"4/16K","BLANK"," IE  "," M1  "," M2  "," 0   ","SIZE ","MAG  "};
+    /* --- Tableau aligné --- */
+    if (igBeginTable("r1_bits_table", 8, ImGuiTableFlags_SizingFixedFit))
+    {
+      /* Ligne 2 : boutons colorés (non cliquables) */
+      igTableNextRow();
+      igBeginDisabled(true);
+      for (int bit = 7; bit >= 0; bit--) 
+      {
+        igTableSetColumnIndex(7 - bit);
+        bool set = (tms9918->write_reg[1] >> bit) & 1;
+        ImVec4 col = set ? blue_hover : border_col;
+        igPushStyleColorImVec4(ImGuiCol_Button, col);
+        igPushStyleColorImVec4(ImGuiCol_ButtonHovered, col);
+        igPushStyleColorImVec4(ImGuiCol_ButtonActive, col);
+        char label[8];
+        snprintf(label, sizeof(label), "%d##R1", bit);
+        igButtonEx(label, (ImVec2){22, 22});
+        igPopStyleColor();
+        igPopStyleColor();
+        igPopStyleColor();
+        if (igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) 
+        {
+            igSetTooltip("%s", r1_bit_desc[bit]);
+        }
+      }
+      igEndDisabled();
+      /* Ligne 3 : noms abrégés */
+      igTableNextRow();
+      for (int bit = 7; bit >= 0; bit--) 
+      {
+        igTableSetColumnIndex(7 - bit);
+        igText("%s", r1_bit_labels[bit]);
+      }
+      igEndTable();
+    }
+    igSeparator();
+    igText("Status Register Bits");
+    /* --- Tableau aligné --- */
+    if (igBeginTable("sr_bits_table", 8, ImGuiTableFlags_SizingFixedFit))
+    {
+      /* Ligne 2 : boutons colorés (non cliquables) */
+      igTableNextRow();
+      igBeginDisabled(true);
+      igTableSetColumnIndex(0);
+      uint8_t val = tms9918->status_reg && 0xF8;
+      char label[8];
+      snprintf(label, sizeof(label), "0x%02X##SR", val);
+      igButtonEx(label, (ImVec2){60, 22});
+      igTableSetColumnIndex(1);
+      bool set = (tms9918->status_reg >> 7) & 1;
+      ImVec4 col = set ? blue_hover : border_col;
+      igPushStyleColorImVec4(ImGuiCol_Button, col);
+      igPushStyleColorImVec4(ImGuiCol_ButtonHovered, col);
+      igPushStyleColorImVec4(ImGuiCol_ButtonActive, col);
+      snprintf(label, sizeof(label), "%d##SR", 2);
+      igButtonEx(label, (ImVec2){22, 22});
+      igPopStyleColor();
+      igPopStyleColor();
+      igPopStyleColor();
+      if (igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) 
+      {
+          igSetTooltip("%s", "Collision Occurred");
+      }
+      igTableSetColumnIndex(2);
+      set = (tms9918->status_reg >> 6) & 1;
+      col = set ? blue_hover : border_col;
+      igPushStyleColorImVec4(ImGuiCol_Button, col);
+      igPushStyleColorImVec4(ImGuiCol_ButtonHovered, col);
+      igPushStyleColorImVec4(ImGuiCol_ButtonActive, col);
+      snprintf(label, sizeof(label), "%d##SR", 1);
+      igButtonEx(label, (ImVec2){22, 22});
+      igPopStyleColor();
+      igPopStyleColor();
+      igPopStyleColor();
+      if (igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) 
+      {
+          igSetTooltip("%s", "Fifth Sprite Overflow");
+      }
+      igTableSetColumnIndex(3);
+      set = (tms9918->status_reg >> 5) & 1;
+      col = set ? blue_hover : border_col;
+      igPushStyleColorImVec4(ImGuiCol_Button, col);
+      igPushStyleColorImVec4(ImGuiCol_ButtonHovered, col);
+      igPushStyleColorImVec4(ImGuiCol_ButtonActive, col);
+      snprintf(label, sizeof(label), "%d##SR", 0);
+      igButtonEx(label, (ImVec2){22, 22});
+      igPopStyleColor();
+      igPopStyleColor();
+      igPopStyleColor();
+      if (igIsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) 
+      {
+          igSetTooltip("%s", "Interrupt Occurred");
+      }
+      igEndDisabled();
+      /* Ligne 3 : noms abrégés */
+      igTableNextRow();
+      igTableSetColumnIndex(0);
+      igText("%s", "5S number");
+      igTableSetColumnIndex(1);
+      igText("%s", " C ");
+      igTableSetColumnIndex(2);
+      igText("%s", "5S");
+      igTableSetColumnIndex(3);
+      igText("%s", " F ");
+      igEndTable();
+    }
+    igEndTabItem();
+  }
+  if (igBeginTabItem("VRAM", NULL, ImGuiTabItemFlags_None))
+  {
+    ImGuiTableFlags table_flags = ImGuiTableFlags_NoHostExtendX | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_BordersOuterV;
+    char str2[20];
+    uint8_t val;
+    igBeginTableEx("tablevram", 10, table_flags, (ImVec2){360.0f, 324.0f}, 0.0f);
+      for (int row = 0; row < VRAM_SIZE/8; row++) 
+      {
+          igTableNextRowEx(ImGuiTableRowFlags_None, 0.0f);
+          str2[0] = '\0';
+          for (int col = 0; col < 10; col++) 
+          {
+              igTableSetColumnIndex(col);
+              if (col == 0) 
+              {
+                  igText("%04X:", row * 8);
+              } 
+              else if(col <= 8)
+              {
+                  val = tms9918->vram[row * 8 + (col - 1)];
+                  igText(" %02X", val);
+                  str2[col -1] = (val >= 32 && val <= 126) ? (char)val : '.';
+                  str2[col -1 +1] = '\0';
+              }
+              else 
+              {
+                  igText("%s", str2);
+              }
+          }
+      }
+      igEndTable();
+      igEndTabItem();
+  }
+  if (igBeginTabItem("Operations", NULL, ImGuiTabItemFlags_None))
+  {
+    igText("Mode: %d", tms9918->mode);
+    igSeparator();
+    igText("VDP Operations State:");
+    igText("Byte 1 of Register Write Stage: 0x%02X", tms9918->regWriteStage0Value);
+    igText("Current Address: 0x%04X", tms9918->currentAddress & VRAM_MASK);
+    igText("Register Write Stage: %d", tms9918->regWriteStage);
+    igSeparator();
+
+    igEndTabItem();
+  }
+
+  igEndTabBar();
   igEnd();
 }
 
@@ -817,7 +1084,7 @@ struct hw_class tms9918_class =
     .readonly = 0,
     .reset = tms9918_reset,
     .read = tms9918_read,
-    .write = NULL,
+    .write = tms9918_write,
     .update = NULL,
     .dump = NULL,
     .check_interrupt = NULL,

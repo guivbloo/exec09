@@ -55,7 +55,6 @@ static state_t state;
 void gui_debugger(ImVec2 pos);
 void gui_memory_editor(ImVec2 pos);
 void gui_specific_features(ImVec2 pos);
-void gui_cpu_display(ImVec2 pos);
 
 void gui_read_hook (absolute_address_t addr)
 {   
