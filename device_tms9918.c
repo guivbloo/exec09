@@ -127,7 +127,7 @@ struct tms9918_port
     uint8_t rowSpriteBits[FB_WIDTH]; /* collision mask */
 };
 
-
+char scanline[FB_WIDTH]; // scanline buffer
 static uint32_t framebuffer[FB_WIDTH * FB_HEIGHT];
 static sg_image fb_texture;
 sg_image_data img_data;
@@ -635,72 +635,46 @@ tms9918_mode_t tms9918_displayMode(struct tms9918_port *tms9918)
 }
 
 
-static void generate_test_pattern(void)
-{
-    // Palette TMS9918 (ARGB)
-    static const uint32_t TMS9918_PALETTE[16] = {
-    0xFF000000, 0xFF000000, 0xFF21C842, 0xFF5EDC78,
-    0xFF5455ED, 0xFF7D76FC, 0xFFD4524D, 0xFF42EBF5,
-    0xFFFC5554, 0xFFFF7978, 0xFFD4C154, 0xFFE6CE80,
-    0xFF21B03B, 0xFFC95BBA, 0xFFCCCCCC, 0xFFFFFFFF
+ /* tms9918 palette */
+uint32_t tms9918_palette[] = {
+  0x00000000, /* transparent */
+  0xff000000, /* black */
+  0xff42c921, /* medium green */
+  0xff78dc5e, /* light green */
+  0xffed5554, /* dark blue -#5455ed */
+  0xfffc757d, /* light blue */
+  0xff4d52d3, /* dark red */
+  0xfff6eb43, /* cyan - #43ebf6ff */
+  0xff5455fd, /* medium red */
+  0xff7879ff, /* light red */
+  0xff53c1d3,  /* dark yellow */
+  0xff80cee5, /* light yellow */
+  0xff3cb021, /* dark green */
+  0xffba5bc9, /* magenta */
+  0xffcccccc, /* grey */
+  0xffffffff  /* white */
 };
-    static int frame = 0;
-    frame++;
-
-    // Taille TMS
-    const int tiles_x = 32;
-    const int tiles_y = 24;
-    const int tile_w = 8;
-    const int tile_h = 8;
-
-    // Génère un fond de tiles
-    for (int ty = 0; ty < tiles_y; ty++) {
-        for (int tx = 0; tx < tiles_x; tx++) {
-
-            // Couleurs style TMS9918 (pseudo-aléatoires mais stables)
-            uint8_t fg = (tx + ty * 3) % 16;
-            uint8_t bg = (tx * 5 + ty * 2) % 16;
-
-            // Pattern simple qui bouge doucement (illusion d’animation)
-            for (int y = 0; y < tile_h; y++) {
-                for (int x = 0; x < tile_w; x++) {
-
-                    int px = tx * tile_w + x;
-                    int py = ty * tile_h + y;
-
-                    uint8_t bit = ((x + y + frame / 5 + tx) % 2) ? 1 : 0;
-
-                    uint32_t color = bit ? 
-                        TMS9918_PALETTE[fg] :
-                        TMS9918_PALETTE[bg];
-
-                    framebuffer[py * FB_WIDTH + px] = color;
-                }
-            }
-        }
-    }
-
-    // --- SPRITE ANIMÉ FAÇON TMS9918 ---
-    static int sx = 0;
-    static int sy = 80;
-
-    sx = (sx + 1) % (FB_WIDTH - 16);
-
-    for (int y = 0; y < 16; y++) {
-        for (int x = 0; x < 16; x++) {
-            int px = sx + x;
-            int py = sy + y;
-            framebuffer[py * FB_WIDTH + px] = TMS9918_PALETTE[8]; // rouge vif
-        }
-    }
-}
 
 
 void tms9918_update (struct hw_device *dev);
 void tms9918_display (struct hw_device *dev, ImVec2 pos)
 {
   struct tms9918_port *tms9918 = (struct tms9918_port *)dev->priv;
-  generate_test_pattern();
+  //generate_test_pattern();
+// generate all scanlines and render to framebuffer
+  uint32_t *pixPtr = framebuffer;
+  for (int y = 0; y < FB_HEIGHT; ++y)
+  {
+    // get the scanline pixels
+    tms9918_scanLine(tms9918, y, scanline);
+    
+    for (int x = 0; x < FB_WIDTH; ++x)
+    {
+      // values returned from vrEmuTms9918ScanLine() are palette indexes
+      // use the vrEmuTms9918Palette array to convert to an RGBA value      
+      *pixPtr++ = tms9918_palette[scanline[x]];
+    }    
+  }
   char reg_temp[10];
   img_data.mip_levels[0].ptr = framebuffer;
   img_data.mip_levels[0].size = FB_WIDTH * FB_HEIGHT * sizeof(uint32_t);
@@ -712,7 +686,7 @@ void tms9918_display (struct hw_device *dev, ImVec2 pos)
     flags |= ImGuiWindowFlags_NoMove;
   igBegin("TMS9918 Video", NULL, flags);
   ImTextureID img_id = simgui_imtextureid(view);
-  igImageEx(imtexref(img_id), (ImVec2){FB_WIDTH * 2, FB_HEIGHT * 2}, (ImVec2){0,1}, (ImVec2){1, 0});
+  igImageEx(imtexref(img_id), (ImVec2){FB_WIDTH * 2, FB_HEIGHT * 2}, (ImVec2){0,0}, (ImVec2){1, 1});
   igNewLine();
   igBeginTabBar(" ", ImGuiTabBarFlags_None);
   if (igBeginTabItem("Registers", NULL, ImGuiTabItemFlags_None))
@@ -970,6 +944,10 @@ void tms9918_display (struct hw_device *dev, ImVec2 pos)
     igText("Byte 1 of Register Write Stage: 0x%02X", tms9918->regWriteStage0Value);
     igText("Current Address: 0x%04X", tms9918->currentAddress & VRAM_MASK);
     igText("Register Write Stage: %d", tms9918->regWriteStage);
+    uint16_t var = tms9918_nameTableAddr(tms9918);
+    igText("Name Table Address: 0x%04X", var);
+    var = tms9918_patternTableAddr(tms9918);
+    igText("Pattern Table Address: 0x%04X", var);
     igSeparator();
 
     igEndTabItem();

@@ -1,21 +1,17 @@
-; vdp_test.S
-; This program displays "Hello World!" on the screen
-
-
-
+; This programs display a pattern on the screen in mode 1 (graphics 1)
 
 ACIA_CFG_REG	equ $C000
 ACIA_STATUS_REG	equ $C000
 ACIA_DATA_REG   equ $C001
 
 TMS_REG0_DATA	equ $00	; Ext OUT disabled
-TMS_REG1_DATA	equ $D0	; 16K, Enable Display, Disable Int.,Text mode, 8x8 Sprites, Mag. Off
-TMS_REG2_DATA	equ $02 ; Start address of name table blocks R2*0x400 -> 0x800
-TMS_REG3_DATA	equ $00 ; Start address of color table blocks R3*0x40 -> not used in text mode
-TMS_REG4_DATA	equ $00 ; Start address of pattern table blocks R4*0x800 -> 0x000
-TMS_REG5_DATA	equ $00 ; Start address of sprite attribute table blocks R5*0x80 -> not used
-TMS_REG6_DATA	equ $00	; Start address of sprite pattern table blocks R6*0x800 -> not used
-TMS_REG7_DATA 	equ $F5	; Foreground color = white,  Background color = blue 1110
+TMS_REG1_DATA	equ $C0	; 16K, Enable Display, Disable Int.,G1 mode, 8x8 Sprites, Mag. Off
+TMS_REG2_DATA	equ $05 ; Start address of name table blocks R2*0x400 -> 0x1400
+TMS_REG3_DATA	equ $80 ; Start address of color table blocks R3*0x40 -> 0x2000
+TMS_REG4_DATA	equ $01 ; Start address of pattern table blocks R4*0x800 -> 0x0800
+TMS_REG5_DATA	equ $20 ; Start address of sprite attribute table blocks R5*0x80 -> 0x1000
+TMS_REG6_DATA	equ $00	; Start address of sprite pattern table blocks R6*0x800 -> 0x0000
+TMS_REG7_DATA 	equ $01	; Background color = Black
 
 TMS_BASE_0		equ $C800	; Mode = 0
 TMS_BASE_1		equ $C801	; Mode = 1
@@ -34,9 +30,11 @@ ACIA_TDRE_MASK	equ %00000010	; Mask to test Transmit Data Register Empty
 ACIA_RDRF_MASK	equ %00000001	; Mask to test Receive Data Register Full
 
 RAMSTART	equ $1000
-		
-	org 0xE000
-	include "charset.inc"
+
+
+    org 0xE000
+
+    include "pat.inc"
 
 main:
 	andcc #%11101111       	; Enable IRQ interrupt.
@@ -83,44 +81,68 @@ main:
 	ldb #TMS_REG7_ADDR
 	stb TMS_BASE_1		; Write to TMS register 7
 
-InitCharsetAndColor:
-    LDX  #charset_6x8       ; pointeur vers charset ASCII
+InitPattern:
+    LDX  #B_PatternTable
 	LDB #$00
 	STB TMS_BASE_1		 ; Adresse haute
-	LDA #$40			 ; Adresse basse
+	LDA #$48			 ; Adresse basse
 	STA TMS_BASE_1         ; Adresse basse
 
 CopyPatternLoop:
     LDA ,X+					; lire un byte du charset
 	STA TMS_BASE_0         ; écrire dans la VRAM
-	CMPX  #end_charset_6x8   ; Comparer X à EndCharsetData
+	CMPX  #E_PatternTable   ; Comparer X à EndCharsetData
     BNE CopyPatternLoop		; non, continuer la copie
 
-	LDX #HelloWorldMsg      ; Pointeur vers la chaîne "Hello World!"
+	LDX #B_NameTable      ; Pointeur vers la chaîne "Hello World!"
 	LDB #$00
 	STB TMS_BASE_1		 ; Adresse haute
-	LDA #$48			 ; Adresse basse
+	LDA #$54			 ; Adresse basse
 	STA TMS_BASE_1         ; Adresse basse
 DisplayLoop:
 	LDA ,X+             ; Charger le caractère suivant
 	STA TMS_BASE_0     ; Écrire le caractère dans la VRAM
-	CMPA #$00          ; Vérifier si c'est la fin de la chaîne
-	BEQ EndDisplay      ; Fin de chaîne (0)
-	BRA DisplayLoop
+	CMPX #E_NameTable         ; Vérifier si c'est la fin de la chaîne
+	BNE DisplayLoop
 
-EndDisplay:
+
+    LDX  #B_ColorTable
+	LDB #$00
+	STB TMS_BASE_1		 ; Adresse haute
+	LDA #$60			 ; Adresse basse
+	STA TMS_BASE_1         ; Adresse basse
+
+CopyColorLoop:
+    LDA ,X+					; lire un byte du charset
+	STA TMS_BASE_0         ; écrire dans la VRAM
+	CMPX  #E_ColorTable   ; Comparer X à EndCharsetData
+    BNE CopyColorLoop		; non, continuer la copie
+
+	LDX  #B_SpritePatternTable
+	LDB #$00
+	STB TMS_BASE_1		 ; Adresse haute
+	LDA #$40			 ; Adresse basse
+	STA TMS_BASE_1         ; Adresse basse
+
+CopySpritePatternLoop:
+    LDA ,X+					; lire un byte du charset
+	STA TMS_BASE_0         ; écrire dans la VRAM
+	CMPX  #E_SpritePatternTable   ; Comparer X à EndCharsetData
+    BNE CopySpritePatternLoop		; non, continuer la copie
+
+	LDX  #B_SpriteAttributeTable
+	LDB #$00
+	STB TMS_BASE_1		 ; Adresse haute
+	LDA #$50			 ; Adresse basse
+	STA TMS_BASE_1         ; Adresse basse
+
+CopySpriteAttributeLoop:
+    LDA ,X+					; lire un byte du charset
+	STA TMS_BASE_0         ; écrire dans la VRAM
+	CMPX  #E_SpriteAttributeTable   ; Comparer X à EndCharsetData
+    BNE CopySpriteAttributeLoop		; non, continuer la copie
 	BRA .
-
-HelloWorldMsg:
-	fcc 'Hello World !'
-	fcb $00
-
-
-
-
-
-
-		
+	
 ;Write a caracter to ACIA
 ;Caracter to be written is in B
 acia_putc:  
@@ -146,9 +168,7 @@ irq_handler:
 end_inter:
 	rti
 
-		
-
-		
+			
 	org 0xFFF8
 	fdb irq_handler		; 
 	org 0xFFFE 
